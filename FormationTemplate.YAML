@@ -1,0 +1,94 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Lapis' Cloudformation Template
+
+Resources:
+  LapisS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: discord-bot-storage-${AWS::AccountId}
+      AccessControl: Private
+
+  LapisTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: LapisData
+      AttributeDefinitions:
+        - AttributeName: Author_ID
+          AttributeType: S
+        - AttributeName: Location
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Author_ID
+          KeyType: HASH
+        - AttributeName: Location
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+
+  LapisLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: LapisLambdaRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 
+                - lambda.amazonaws.com
+            Action: 
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: LapisPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                Resource: !GetAtt LapisDynamoDB.Arn
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                Resource: !Sub "arn:aws:s3:::${LapisS3Bucket}/*"
+
+  ### Lambda Function for Discord Bot ###
+  LapisLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: LapisLambda
+      Handler: lambda_function.lambda_handler  # Change if using a different handler
+      Runtime: python3.9
+      Role: !GetAtt LapisLambdaRole.Arn
+      Code:
+        S3Bucket: my-lambda-code-bucket  # Change this to your S3 bucket name containing the code
+        S3Key: discord-bot-code.zip  # Update this with the actual ZIP file name
+      MemorySize: 128
+      Timeout: 15
+      Environment:
+        Variables:
+          DISCORD_BOT_TOKEN: "your-discord-bot-token"  # Store this in AWS Secrets Manager instead
+          DYNAMODB_TABLE: !Ref LapisTable
+          S3_BUCKET: !Ref LapisS3Bucket
+
+Outputs:
+  S3BucketName:
+    Description: "S3 Bucket Name"
+    Value: !Ref LapisS3Bucket
+
+  DynamoDBTableName:
+    Description: "DynamoDB Table Name"
+    Value: !Ref LapisDynamoDB
+
+  LambdaFunctionArn:
+    Description: "Lambda Function ARN"
+    Value: !GetAtt LapisLambda.Arn
