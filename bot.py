@@ -22,9 +22,9 @@ async def on_ready():
     
 
 @bot.command()
-async def newLocation(ctx, *, locationName: str, locationCoords: str):
+async def newLocation(ctx, locationName: str, locationCoords: str):
     try:
-        dataTable.putItem(
+        dataTable.put_item(
         Item={
             "Author_ID": str(ctx.author.id),
             "Author_Name": f'{ctx.author.name}#{ctx.author.discriminator}',
@@ -42,35 +42,37 @@ List is returned with all locations matching a name
 and still unique due to an ID
 '''
 @bot.command()
-async def getLocation(ctx, *, locationName: str):
-    locationKeyExpression = dataTable.conditions.Key('Location').eq(str(locationName))
-    authorIDExpression = dataTable.conditions.Key("Author.ID").eq(str(ctx.author.id))
+async def getLocation(ctx, locationName: str):
     try:  
-        response = dataTable.query(
-        IndexName="Location", 
-        KeyConditionExpression=locationKeyExpression & authorIDExpression)
-        
-        if 'Items' in response and response['Items']:
-            locations = "\n".join([f"Location: {item['Location']} - Coordinates: {item['Coordinates']}" for item in response['Items']])
-            await ctx.send(f"Found:\n{locations}")
+        response = dataTable.get_item(
+            Key={
+                'Author_ID': str(ctx.author.id),
+                'Location': locationName
+            }
+        )
+        if response and response['item']:
+            await ctx.send(f"Found:\nLocation: {response['Item']['Location']}  Coordinates: {response['Item']['Coordinates']}")
         else:
-            await ctx.send(f"No locations found for name {locationName}.")
+            await ctx.send(f"No location named {locationName} has been found. Check your spelling.")
     except ClientError as e:
-        await ctx.send(f'Error getting locations: {e}')
+        print(f'{e}')
+        await ctx.send(f'Error getting locations, try again later.')
 
 
 @bot.command()
-async def deleteLocation(ctx, *, locationName: str):
+async def deleteLocation(ctx, locationName: str):
     try:
-        dataTable.delete_item(
+        response = dataTable.delete_item(
             Key={
-                'Location': locationName,
-                'Author_ID': ctx.author.id
+                'Author_ID': str(ctx.author.id),
+                'Location': locationName
             }
         )
         await ctx.send(f"{locationName} has been deleted.")
+        await ctx.send(f'{response}')
     except ClientError as e:
-        await ctx.send(f'Error deleting {locationName}, check the spelling of the provided location.')
+        print(f'Error: {e}')
+        await ctx.send(f'Error deleting {locationName}, check your spelling.')
     
 
 bot.run(TOKEN)

@@ -2,11 +2,30 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Lapis' Cloudformation Template
 
 Resources:
-  LapisS3Bucket:
+  LapisCodeAndImages:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: discord-bot-storage-${AWS::AccountId}
+      BucketName: !Sub "lapis-memory-${AWS::AccountId}"
       AccessControl: Private
+
+  CloudFormationExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: cloudformation.amazonaws.com
+      Policies:
+        - PolicyName: CloudFormationFullAccessPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: "*"
+                Resource: "*"
 
   LapisTable:
     Type: AWS::DynamoDB::Table
@@ -54,41 +73,18 @@ Resources:
                   - dynamodb:GetItem
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
-                Resource: !GetAtt LapisDynamoDB.Arn
+                Resource: !GetAtt LapisTable.Arn
               - Effect: Allow
                 Action:
                   - s3:PutObject
                   - s3:GetObject
-                Resource: !Sub "arn:aws:s3:::${LapisS3Bucket}/*"
-
-  ### Lambda Function for Discord Bot ###
-  LapisLambda:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: LapisLambda
-      Handler: lambda_function.lambda_handler  # Change if using a different handler
-      Runtime: python3.9
-      Role: !GetAtt LapisLambdaRole.Arn
-      Code:
-        S3Bucket: my-lambda-code-bucket  # Change this to your S3 bucket name containing the code
-        S3Key: discord-bot-code.zip  # Update this with the actual ZIP file name
-      MemorySize: 128
-      Timeout: 15
-      Environment:
-        Variables:
-          DISCORD_BOT_TOKEN: "your-discord-bot-token"  # Store this in AWS Secrets Manager instead
-          DYNAMODB_TABLE: !Ref LapisTable
-          S3_BUCKET: !Ref LapisS3Bucket
+                Resource: !Sub "arn:aws:s3:::${LapisCodeAndImages}/*"
 
 Outputs:
   S3BucketName:
-    Description: "S3 Bucket Name"
-    Value: !Ref LapisS3Bucket
+    Description: "Bucket for imgs users send to Lapis."
+    Value: !Ref LapisCodeAndImages
 
   DynamoDBTableName:
-    Description: "DynamoDB Table Name"
-    Value: !Ref LapisDynamoDB
-
-  LambdaFunctionArn:
-    Description: "Lambda Function ARN"
-    Value: !GetAtt LapisLambda.Arn
+    Description: "Location data."
+    Value: !Ref LapisTable
