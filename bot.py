@@ -7,18 +7,12 @@ from botocore.exceptions import ClientError
 from discord.ext import commands
 from io import BytesIO
 
-
+load_dotenv()
 TOKEN = os.getenv('TOKEN')
 BUCKET = os.getenv('BUCKET_NAME')
-
-load_dotenv()
 dbInstance = boto3.resource('dynamodb')
 s3Instance = boto3.resource('s3')
-
-
 TABLE = dbInstance.Table(os.getenv('TABLE_NAME'))
-
-
 intents = discord.Intents.default()
 intents.message_content = True 
 bot = commands.Bot(command_prefix='!', intents=intents)
@@ -101,24 +95,24 @@ async def deleteLocation(ctx, locationName: str):
     
 
 
-@bot.command()
-async def uploadImage(message):
-    if message.author.bot:
-        return
+# @bot.command()
+# async def uploadImage(message):
+#     if message.author.bot:
+#         return
     
-    if message.attachment.content_type.startswith("image/"):
-        img_data = requests.get(message.attachment.url).content
-        filename = f"uploads/{message.attachment.filename}"
-        try:
-            s3Instance.upload_fileobj(BytesIO(img_data), BUCKET, filename, ExtraArgs={"ACL": "public-read"})
-            s3_url = f"https://{BUCKET}.s3.amazonaws.com/{filename}"
-            response = dbInstance.updateItem(Key={
+#     if message.attachment.content_type.startswith("image/"):
+#         img_data = requests.get(message.attachment.url).content
+#         filename = f"uploads/{message.attachment.filename}"
+#         try:
+#             s3Instance.upload_fileobj(BytesIO(img_data), BUCKET, filename, ExtraArgs={"ACL": "public-read"})
+#             s3_url = f"https://{BUCKET}.s3.amazonaws.com/{filename}"
+#             response = dbInstance.updateItem(Key={
                 
-            })
-        except Exception as e:
-            print(e)
+#             })
+#         except Exception as e:
+#             print(e)
         
-        await message.channel.send(f"Image uploaded: {s3_url}")
+#         await message.channel.send(f"Image uploaded: {s3_url}")
 
     
     

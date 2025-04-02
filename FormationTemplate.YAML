@@ -79,6 +79,11 @@ Resources:
                   - s3:PutObject
                   - s3:GetObject
                 Resource: !Sub "arn:aws:s3:::${LapisCodeAndImages}/*"
+ LapisFernetKey:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: LapisAppSecret
+      Description: "Fernet key for Lapis' CSE"
 
 Outputs:
   S3BucketName:
@@ -88,3 +93,7 @@ Outputs:
   DynamoDBTableName:
     Description: "Location data."
     Value: !Ref LapisTable
+  
+  SecretARN:
+    Description: "ARN of Lapis' stored fernet key."
+    Value: !Ref LapisFernetKey
