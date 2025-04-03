@@ -4,6 +4,7 @@ import boto3
 import requests
 from dotenv import load_dotenv
 from botocore.exceptions import ClientError
+from encryption import encrypt, decrypt
 from discord.ext import commands
 from io import BytesIO
 
@@ -13,11 +14,10 @@ BUCKET = os.getenv('BUCKET_NAME')
 dbInstance = boto3.resource('dynamodb')
 s3Instance = boto3.resource('s3')
 TABLE = dbInstance.Table(os.getenv('TABLE_NAME'))
+
 intents = discord.Intents.default()
 intents.message_content = True 
 bot = commands.Bot(command_prefix='!', intents=intents)
-
-
 
 @bot.event
 async def on_ready():
@@ -29,10 +29,10 @@ async def newLocation(ctx, locationName: str, locationCoords: str):
     try:
         TABLE.put_item(
         Item={
-            "Author_ID": str(ctx.author.id),
-            "Author_Name": f'{ctx.author.name}#{ctx.author.discriminator}',
-            "Location" : locationName,
-            "Coordinates": locationCoords,
+            "Author_ID": encrypt(str(ctx.author.id)).decode(),
+            "Author_Name": encrypt(f'{ctx.author.name}#{ctx.author.discriminator}').decode(),
+            "Location" : encrypt(locationName).decode(),
+            "Coordinates": encrypt(locationCoords).decode(),
         }
     )
         await ctx.send(f"{ctx.author.name}, your location `{locationName}` is saved!")
@@ -77,7 +77,7 @@ async def deleteLocation(ctx, locationName: str):
         print(f'Error: {e}')
         await ctx.send(f'Error deleting {locationName}, check your spelling.')
     
-
+bot.run(TOKEN)
 # @bot.command()
 # async def updateLocation(ctx, oldLocationName, newLocationName: str):
 #     try:
@@ -114,7 +114,3 @@ async def deleteLocation(ctx, locationName: str):
         
 #         await message.channel.send(f"Image uploaded: {s3_url}")
 
-    
-    
-
-bot.run(TOKEN)
