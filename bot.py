@@ -13,7 +13,7 @@ from io import BytesIO
 TODO
 Input validation checking for commands
 !list command - all locations for a specific player
-!help command - all commands a player can use
+!help command - all commands a player can use - make dynamic?
 s3 operations
 refactoring of updateLocation - by location name or coordinates
 delay between commands for a user so they can't be spammed
@@ -33,9 +33,9 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 @bot.event
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
-    
 
-@bot.command(name="saveLocation")
+
+@bot.command(name="saveLocation", help="Format: !saveLocation location_name 'X Y Z'")
 async def saveLocation(ctx, locationName: str, locationCoords: str):
     try:
         TABLE.put_item(
@@ -46,17 +46,13 @@ async def saveLocation(ctx, locationName: str, locationCoords: str):
             "Coordinates": encrypt(locationCoords).decode(),
         }
     )
-        print("Saved location. ")
-        await ctx.send(f"{ctx.author.name}, your location `{locationName}` is saved!")
+        await ctx.send(f"{ctx.author.name}, your new location `{locationName}` is saved!")
     except ClientError as e:
         await ctx.send(f'Error saving your location: {e}')
 
-    
-'''
-List is returned with all locations matching a name
-and still unique due to an ID
-'''
-@bot.command(name="getLocation")
+   
+
+@bot.command(name="getLocation", help="Format: !getLocation location_name ")
 async def getLocation(ctx, locationName: str):
     try:  
         response = TABLE.get_item(
@@ -76,8 +72,9 @@ async def getLocation(ctx, locationName: str):
         await ctx.send(f'Error getting locations, try again later.')
 
         
-    
-@bot.command(name="deleteLocation")
+
+
+@bot.command(name="deleteLocation", help="!deleteLocation location_name")
 async def deleteLocation(ctx, locationName: str):
     try:
         deletion_response = TABLE.delete_item(
@@ -100,7 +97,7 @@ async def deleteLocation(ctx, locationName: str):
         await ctx.send(f'Error deleting {locationName}: {error_message}. Check your spelling or try again.')
 
 
-@bot.command(name="updateLocation")
+@bot.command(name="updateLocation", help="Format; !updateLocation location_name")
 async def updateLocation(ctx, locationName, new_coordinates):
     try:
      item_to_update = TABLE.update_item(
@@ -125,6 +122,35 @@ async def updateLocation(ctx, locationName, new_coordinates):
         await ctx.send(f'Error updating {locationName}: {error_message}. Check your spelling or try again.')
 
 
+@bot.command("list")
+async def list_locations_for_player(ctx):
+    try:
+        player_locations = TABLE.query(
+            KeyConditionExpression=Key("Author_ID").eq(str(ctx.author.id))
+        )
+        if len(player_locations) >= 1:
+            await ctx.send(f"{[decrypt(location.encode()).decode() for location in player_locations]}")
+        else:
+            await ctx.send("You don't have any locations listed currently.")
+    except ClientError as e:
+        print(f'{e}')
+
+@bot.command(name="help")
+async def help_command(ctx):
+    help_text = '''
+        Commands are always in one of these forms:
+        !command location_name 'x y z'
+        !command location_name
+        !command
+    '''
+    
+    for command in bot.commands:
+        if not command.hidden:
+            help_text += f"**!{command.name}** - {command.help or 'No description provided.'}\n"
+
+    await ctx.send(help_text)
+    
+    
 
 # @bot.command(name="saveImage")
 # async def uploadImage(message):
