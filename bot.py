@@ -2,12 +2,14 @@ import os
 import discord
 import boto3
 from discord.ext.commands import CommandNotFound, MissingRequiredArgument, BadArgument
+from discord import Color
 import requests
 from utils import *
 from docstrings import *
 from dotenv import load_dotenv
 from botocore.exceptions import ClientError
 from encryption import encrypt, decrypt, generate_hash
+from embed import *
 from discord.ext import commands
 from boto3.dynamodb.conditions import Key
 from io import BytesIO
@@ -56,9 +58,13 @@ async def saveLocation(ctx, locationName: str, locationCoords: str):
                 "Coordinates": encrypt(locationCoords).decode(),
             }
         )
-            await ctx.send(f"{ctx.author.name}, your new location `{locationName}` has been saved!")
+            await ctx.send(embed=makeEmbed(f"New location {locationName} has been saved.", 
+                                           Color.blue(), 
+                                           ctx, 
+                                           locationName, 
+                                           locationCoords))
         except ClientError as e:
-            await ctx.send(f'Error saving your location: {e}')
+            await ctx.send(embed=makeErrorEmbed("Error saving your location", {e}))
 
 @bot.command(name="getLocation", help=getDocString)
 async def getLocation(ctx, locationName: str):
@@ -76,12 +82,12 @@ async def getLocation(ctx, locationName: str):
             if 'Item' in response:
                 encryptedCoordinates = response['Item']['Coordinates']
                 retrieved_coordinates = decrypt(encryptedCoordinates.encode()).decode()
-                await ctx.send(f"Found coordinates: '{retrieved_coordinates} for location {locationName}'")
+                await ctx.send(embed=makeEmbed(f"Found coordinates: '{retrieved_coordinates} for location {locationName}'", 
+                                               Color.blue(), ctx))
             else:
-                await ctx.send(f"No location named {locationName} has been found. Check your spelling.")
+                await ctx.send(embed=makeErrorEmbed(f"No location named {locationName} has been found. Check your spelling."))
         except ClientError as e:
-            print(f'{e}')
-            await ctx.send(f'Error getting locations, try again later.')
+            await ctx.send(embed=makeErrorEmbed(f'Error getting locations, try again later.', {e}))
 
         
 
@@ -100,16 +106,14 @@ async def deleteLocation(ctx, locationName: str):
                 },
                 ReturnValues="ALL_OLD"
             )
-            print(deletion_response)
             if "Attributes" in deletion_response:
-                print("Item was deleted:", deletion_response["Attributes"])
-                await ctx.send(f"Location '{locationName}' has been deleted.")
+                await ctx.send(embed=makeEmbed(f"{locationName} has been deleted.",
+                                               Color.blue(), ctx, f"Coords were: {decrypt(deletion_response["Attributes"]["Coordinates"]).decode()}"))
             else:
-                await ctx.send(f"No matching location found for '{locationName}'. Call !list to see all locations you have created.")
+                await ctx.send(embed=makeErrorEmbed(f"No matching location found for '{locationName}'. Call !list to see all locations you have created."))
         except ClientError as e:
             error_message = e.response["Error"]["Message"]
-            print(f'Error: {error_message}')
-            await ctx.send(f'Error deleting {locationName}: {error_message}.')
+            await ctx.send(makeErrorEmbed(f'Error deleting {locationName}.', error_message))
 
 
 @bot.command(name="updateLocation", help=updateDocString)
@@ -133,12 +137,11 @@ async def updateLocation(ctx, locationName, new_coordinates):
                 ConditionExpression="attribute_exists(Coordinates)"
             )
             if "Attributes" in item_to_update:
-                    await ctx.send(f"{locationName} updated successfully. New coordinates: {decrypt(item_to_update['Attributes']['Coordinates']).decode()}")
+                    await ctx.send(embed=makeEmbed(f"{locationName} updated successfully. New coordinates: {decrypt(item_to_update['Attributes']['Coordinates']).decode()}", ctx))
 
         except ClientError as e:
             error_message = e.response["Error"]["Message"]
-            print(f'Error: {error_message}')
-            await ctx.send(f'Error updating {locationName}. Make sure it exists with !list.')
+            await ctx.send(embed=makeErrorEmbed(f'Error updating {locationName}. Make sure it exists with !list.', error_message))
 
 
 @bot.command(name="list", help=listDocString)
@@ -148,11 +151,13 @@ async def list_locations_for_player(ctx):
             KeyConditionExpression=Key("Author_ID").eq(str(ctx.author.id))
         )
         encrypted_locations = [val for val in response['Items']]
-        player_locations = extract_decrypted_locations(encrypted_locations)
+        unencrypted_locations = extract_decrypted_locations(encrypted_locations)
+        player_locations = "\n".join([f"• {p['Location_Name']} — {p['Coordinates']}" for p in unencrypted_locations])
         if len(player_locations) >= 1:
-            await ctx.send(player_locations)
+            await ctx.send(embed=makeEmbed(f"All locations created by {ctx.author.display_name}", Color.blue(),
+                                           ctx, player_locations))
         else:
-            await ctx.send("You don't have any locations created.")
+            await ctx.send(embed=makeErrorEmbed("You have no locations to list."))
     except ClientError as e:
         print(f'{e}')
 
@@ -168,13 +173,28 @@ async def help_command(ctx):
         if not command.hidden:
             help_text += f"**!{command.name}** - {command.help or 'No description provided.'}\n"
 
-    await ctx.send(help_text)
+    await ctx.send(embed=makeEmbed("Lapis' Commands", Color.blue(), ctx, help_text))
 
 @bot.command(name="logout", help="Logs the bot out of Discord. Bot owner only.")
 @commands.is_owner()
 async def logout(ctx):
     await ctx.send("Logging out...")
     await bot.close()
+    
+
+
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, CommandNotFound):
+        await ctx.send(makeErrorEmbed("That command doesn't exist. Send `!helpme` for a list of all commands."))
+    elif isinstance(error, MissingRequiredArgument):
+        await ctx.send(makeErrorEmbed("You're missing a required argument. Check `!helpme` for the proper format."))
+    elif isinstance(error, BadArgument):
+        await ctx.send(makeErrorEmbed("Invalid argument type. Please check your input."))
+    else:
+        await ctx.send(embed=makeErrorEmbed("An error occured", error))
+        
+bot.run(TOKEN)
     
 
 # @bot.command(name="saveImage")
@@ -195,20 +215,3 @@ async def logout(ctx):
 #             print(e)
         
 #         await message.channel.send(f"Image uploaded, access it here: {s3_url}")
-
-
-@bot.event
-async def on_command_error(ctx, error):
-    if isinstance(error, CommandNotFound):
-        await ctx.send("That command doesn't exist. Send `!helpme` for a list of all commands.")
-
-    elif isinstance(error, MissingRequiredArgument):
-        await ctx.send("You're missing a required argument. Check `!helpme` for the proper format.")
-
-    elif isinstance(error, BadArgument):
-        await ctx.send("Invalid argument type. Please check your input.")
-
-    else:
-        await ctx.send(f"An error occurred: {error}")
-        
-bot.run(TOKEN)
