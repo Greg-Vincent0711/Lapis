@@ -5,7 +5,7 @@ MAX_Y = 320
 MIN_Y = -64
 
 def isCorrectLength(name: str) -> str | bool:
-    return True if len(name) <= 30 else "Invalid name length. Must be <= 30 characters."
+    return True if len(name) <= 30 and len(name) >= 3 else "Invalid name length. Must between 3 and 30 characters."
 
 # Checks for coord format and bounds of the coords sent
 def isCorrectCoordFormat(coordinates: str) -> str | bool:

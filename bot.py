@@ -15,7 +15,6 @@ from io import BytesIO
 '''
 TODO
 s3 operations
-refactoring of updateLocation - by location name or coordinates
 delay between commands for a user so they can't be spammed
 text embeds to make bot responses look better
 '''
@@ -37,7 +36,6 @@ async def on_ready():
 
 @bot.command(name="saveLocation", help=saveDocString)
 async def saveLocation(ctx, locationName: str, locationCoords: str): 
-    print("from save location" + locationCoords)   
     coordFormatMsg = isCorrectCoordFormat(locationCoords)
     nameLengthVar = isCorrectLength(locationName)
 
@@ -101,13 +99,13 @@ async def deleteLocation(ctx, locationName: str):
                     "Location": generate_hash(locationName)
                 },
                 ReturnValues="ALL_OLD"
-            ),
-            
+            )
+            print(deletion_response)
             if "Attributes" in deletion_response:
                 print("Item was deleted:", deletion_response["Attributes"])
-                await ctx.send(f"{locationName} has been deleted.")
+                await ctx.send(f"Location '{locationName}' has been deleted.")
             else:
-                await ctx.send(f"No matching location found for {locationName}. Call !list to see all locations you have created.")
+                await ctx.send(f"No matching location found for '{locationName}'. Call !list to see all locations you have created.")
         except ClientError as e:
             error_message = e.response["Error"]["Message"]
             print(f'Error: {error_message}')
@@ -130,17 +128,17 @@ async def updateLocation(ctx, locationName, new_coordinates):
                 ExpressionAttributeValues={
                     ":newCoords": encrypt(new_coordinates).decode()
                 },
-                ReturnValues="UPDATED_NEW"
+                ReturnValues="UPDATED_NEW",
+                # prevents upsert, don't want to silently make new values
+                ConditionExpression="attribute_exists(Coordinates)"
             )
             if "Attributes" in item_to_update:
-                    await ctx.send(f"{locationName} updated successfully. New coordinates: {item_to_update['Attributes']['Coordinates']}")
-            else:
-                await ctx.send(f"{locationName} update attempted, but no values were returned. Double-check if it exists with !list.")
+                    await ctx.send(f"{locationName} updated successfully. New coordinates: {decrypt(item_to_update['Attributes']['Coordinates']).decode()}")
 
         except ClientError as e:
             error_message = e.response["Error"]["Message"]
             print(f'Error: {error_message}')
-            await ctx.send(f'Error updating {locationName}: {error_message}. Check your spelling or try again.')
+            await ctx.send(f'Error updating {locationName}. Make sure it exists with !list.')
 
 
 @bot.command(name="list", help=listDocString)
@@ -149,7 +147,6 @@ async def list_locations_for_player(ctx):
         response = TABLE.query(
             KeyConditionExpression=Key("Author_ID").eq(str(ctx.author.id))
         )
-        # decrypt(encryptedCoordinates.encode()).decode()
         encrypted_locations = [val for val in response['Items']]
         player_locations = extract_decrypted_locations(encrypted_locations)
         if len(player_locations) >= 1:
