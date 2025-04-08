@@ -3,7 +3,7 @@ import discord
 import boto3
 from discord.ext.commands import CommandNotFound, MissingRequiredArgument, BadArgument
 from discord import Color
-import requests
+# import requests
 from utils import *
 from docstrings import *
 from dotenv import load_dotenv
@@ -12,14 +12,15 @@ from encryption import encrypt, decrypt, generate_hash
 from embed import *
 from discord.ext import commands
 from boto3.dynamodb.conditions import Key
-from io import BytesIO
+# from io import BytesIO
 
 '''
 TODO
 s3 operations
-delay between commands for a user so they can't be spammed
-text embeds to make bot responses look better
+Map integration
+Refactoring as bugs come up
 '''
+
 load_dotenv()
 TOKEN = os.getenv('TOKEN')
 BUCKET = os.getenv('BUCKET_NAME')
@@ -31,11 +32,14 @@ intents = discord.Intents.default()
 intents.message_content = True 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+RATE = 1
+PER: float = 5
+
 @bot.event
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
 
-
+@commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="saveLocation", help=saveDocString)
 async def saveLocation(ctx, locationName: str, locationCoords: str): 
     coordFormatMsg = isCorrectCoordFormat(locationCoords)
@@ -66,6 +70,7 @@ async def saveLocation(ctx, locationName: str, locationCoords: str):
         except ClientError as e:
             await ctx.send(embed=makeErrorEmbed("Error saving your location", {e}))
 
+@commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="getLocation", help=getDocString)
 async def getLocation(ctx, locationName: str):
     nameLengthVar = isCorrectLength(locationName)
@@ -91,7 +96,7 @@ async def getLocation(ctx, locationName: str):
 
         
 
-
+@commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="deleteLocation", help=deleteDocString)
 async def deleteLocation(ctx, locationName: str):
     nameLengthVar = isCorrectLength(locationName)
@@ -115,7 +120,7 @@ async def deleteLocation(ctx, locationName: str):
             error_message = e.response["Error"]["Message"]
             await ctx.send(makeErrorEmbed(f'Error deleting {locationName}.', error_message))
 
-
+@commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="updateLocation", help=updateDocString)
 async def updateLocation(ctx, locationName, new_coordinates):
     nameLengthVar = isCorrectLength(locationName)
@@ -143,7 +148,7 @@ async def updateLocation(ctx, locationName, new_coordinates):
             error_message = e.response["Error"]["Message"]
             await ctx.send(embed=makeErrorEmbed(f'Error updating {locationName}. Make sure it exists with !list.', error_message))
 
-
+@commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="list", help=listDocString)
 async def list_locations_for_player(ctx):
     try:
@@ -161,6 +166,7 @@ async def list_locations_for_player(ctx):
     except ClientError as e:
         print(f'{e}')
 
+@commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="helpme", help=helpDocString)
 async def help_command(ctx):
     help_text = (
@@ -191,6 +197,9 @@ async def on_command_error(ctx, error):
         await ctx.send(makeErrorEmbed("You're missing a required argument. Check `!helpme` for the proper format."))
     elif isinstance(error, BadArgument):
         await ctx.send(makeErrorEmbed("Invalid argument type. Please check your input."))
+    elif isinstance(error, commands.CommandOnCooldown):
+        await ctx.send(embed=makeErrorEmbed("Wait before sending this command again.", f"Try again in {round(error.retry_after, 1)}s"))
+        # await ctx.send(f" Wait before sending this command again. Try again in `{round(error.retry_after, 1)}s`.")
     else:
         await ctx.send(embed=makeErrorEmbed("An error occured", error))
         
