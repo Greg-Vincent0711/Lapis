@@ -26,7 +26,6 @@ def isCorrectCoordFormat(coordinates: str) -> str | bool:
         return "Coordinates are not valid integers(can't be decimals like '10.5' for example)."
     return True
 
-
 def extract_decrypted_locations(encryptedData):
     decryptedLocations = []
     for entry in encryptedData:
@@ -39,3 +38,7 @@ def extract_decrypted_locations(encryptedData):
             print(f"Error decrypting an item: {e}")
     print(decryptedLocations)
     return decryptedLocations
+
+
+def format_coords(coord_string: str) -> str:
+    return ", ".join(coord_string.strip().split())
