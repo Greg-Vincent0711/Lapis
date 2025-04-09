@@ -13,7 +13,7 @@ def isCorrectCoordFormat(coordinates: str) -> str | bool:
     match = re.fullmatch(r"\s*(-?\d+)\s*[,\s]+\s*(-?\d+)\s*[,\s]+\s*(-?\d+)\s*", coordinates)
     print(match)
     if not match:
-        return "Incorrect format. Use double quotes around your coordinates in the form 'X Y Z' or 'X,Y,Z'."
+        return "Incorrect format. Use double quotes around your numeric coordinates in the form 'X Y Z' or 'X,Y,Z'."
     try:
         x_coord, y_coord, z_coord = map(int, match.groups())
         if not (-MAX_X_OR_Z <= x_coord <= MAX_X_OR_Z):

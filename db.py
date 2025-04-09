@@ -2,6 +2,7 @@
 import boto3
 from botocore.exceptions import ClientError
 from encryption import encrypt, decrypt, generate_hash
+from utils import extract_decrypted_locations, format_coords
 import os
 
 dbInstance = boto3.resource('dynamodb')
@@ -24,31 +25,41 @@ def save_location(author_id, location_name, coords):
 
 def get_location(author_id, location_name):
     try:
-        return TABLE.get_item(
+        res = TABLE.get_item(
             Key={
                 "Author_ID": str(author_id),
                 "Location": generate_hash(location_name)
             }
         )
-        
+        if 'Item' in res:
+            encryptedCoordinates = res['Item']['Coordinates']
+            retrieved_coordinates = format_coords(decrypt(encryptedCoordinates.encode()).decode())
+            return retrieved_coordinates
+        else: 
+            return None
+    
     except ClientError as e:
         raise e
 
 def delete_location(author_id, location_name):
     try:
-        return TABLE.delete_item(
+        res = TABLE.delete_item(
             Key={
                 "Author_ID": str(author_id),
                 "Location": generate_hash(location_name)
             },
             ReturnValues="ALL_OLD"
         )
+        if 'Attributes' in res:
+            return format_coords(decrypt(res["Attributes"]["Coordinates"]).decode())
+        else:
+            return None
     except ClientError as e:
         raise e
 
 def update_location(author_id, location_name, new_coords):
     try:
-        return TABLE.update_item(
+        res =  TABLE.update_item(
             Key={
                 "Author_ID": str(author_id),
                 "Location": generate_hash(location_name)
@@ -60,13 +71,22 @@ def update_location(author_id, location_name, new_coords):
             ReturnValues="UPDATED_NEW",
             ConditionExpression="attribute_exists(Coordinates)"
         )
+        if "Attributes" in res:
+            return format_coords(decrypt(res['Attributes']['Coordinates']).decode())
+        else:
+            return None
+            
+        
     except ClientError as e:
         raise e
 
 def list_locations(author_id):
     try:
-        return TABLE.query(
+        response = TABLE.query(
             KeyConditionExpression=boto3.dynamodb.conditions.Key("Author_ID").eq(str(author_id))
         )
+        encrypted_locations = [item for item in response['Items']]
+        unencrypted_locations = extract_decrypted_locations(encrypted_locations)
+        return "\n".join([f"{p['Location_Name']} — {format_coords(p['Coordinates'])}" for p in unencrypted_locations])
     except ClientError as e:
         raise e
