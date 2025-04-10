@@ -39,6 +39,6 @@ def extract_decrypted_locations(encryptedData):
     print(decryptedLocations)
     return decryptedLocations
 
-
 def format_coords(coord_string: str) -> str:
-    return ", ".join(coord_string.strip().split())
+    individualCoords = [coord for coord in re.split(r'[,\s]+', coord_string.strip()) if coord]
+    return ",".join(individualCoords)

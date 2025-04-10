@@ -1,8 +1,9 @@
 # db.py
 import boto3
 from botocore.exceptions import ClientError
+from s3_fns import uploadImage, deleteImage
 from encryption import encrypt, decrypt, generate_hash
-from utils import extract_decrypted_locations, format_coords
+from utils import extract_decrypted_locations
 import os
 
 dbInstance = boto3.resource('dynamodb')
@@ -33,7 +34,7 @@ def get_location(author_id, location_name):
         )
         if 'Item' in res:
             encryptedCoordinates = res['Item']['Coordinates']
-            retrieved_coordinates = format_coords(decrypt(encryptedCoordinates.encode()).decode())
+            retrieved_coordinates = decrypt(encryptedCoordinates.encode()).decode()
             return retrieved_coordinates
         else: 
             return None
@@ -51,7 +52,7 @@ def delete_location(author_id, location_name):
             ReturnValues="ALL_OLD"
         )
         if 'Attributes' in res:
-            return format_coords(decrypt(res["Attributes"]["Coordinates"]).decode())
+            return decrypt(res["Attributes"]["Coordinates"]).decode()
         else:
             return None
     except ClientError as e:
@@ -72,7 +73,7 @@ def update_location(author_id, location_name, new_coords):
             ConditionExpression="attribute_exists(Coordinates)"
         )
         if "Attributes" in res:
-            return format_coords(decrypt(res['Attributes']['Coordinates']).decode())
+            return decrypt(res['Attributes']['Coordinates']).decode()
         else:
             return None
             
@@ -87,6 +88,31 @@ def list_locations(author_id):
         )
         encrypted_locations = [item for item in response['Items']]
         unencrypted_locations = extract_decrypted_locations(encrypted_locations)
-        return "\n".join([f"{p['Location_Name']} — {format_coords(p['Coordinates'])}" for p in unencrypted_locations])
+        return "\n".join([f"{p['Location_Name']} — {p['Coordinates']}" for p in unencrypted_locations])
     except ClientError as e:
         raise e
+
+async def save_image_url(author_id,location_name, message):
+    image_url = await uploadImage(message)
+    try:
+        res = TABLE.update_item(
+            Key={
+                "Author_ID": str(author_id),
+                "Location": generate_hash(location_name)
+            },
+            UpdateExpression="set Image_URL = :img_url",
+            ExpressionAttributeValues={
+                ":img_url": encrypt(image_url).decode()
+            },
+            ReturnValues="UPDATED_NEW",
+        )
+        if "Attributes" in res:
+            return "Saved an image for your location."
+        else:
+            return None
+    except Exception as e:
+        print(e)
+        
+
+def delete_image_url(author_id,location_name, message):
+    pass

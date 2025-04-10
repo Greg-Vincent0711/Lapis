@@ -15,6 +15,10 @@ deleteDocString = '''
 listDocString = '''
     See all locations you have saved.
 '''
+addImgDocString='''
+    Add an image to your location.
+'''
+
 helpDocString = '''
     Everything Lapis can do.
 '''

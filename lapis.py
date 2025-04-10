@@ -13,7 +13,7 @@ from db import *
 '''
 TODO
 s3 operations
-Map integration
+Map integration with Dynmap, Chunkbase maybe
 '''
 
 load_dotenv()
@@ -133,6 +133,26 @@ async def help_command(ctx):
             help_text += f"**!{command.name}** - {command.help or 'No description provided.'}\n"
 
     await ctx.send(embed=makeEmbed("Lapis' Commands", Color.blue(), ctx, help_text))
+
+@commands.cooldown(RATE, PER, commands.BucketType.user)
+@bot.command(name="addImage", help=addImgDocString)
+async def addImage(ctx, location_name):
+    # Make sure an attachment exists
+    if not ctx.message.attachments:
+        await ctx.send("Please attach an image with your command.")
+        return
+
+    message = ctx.message  # get the full message object
+    author_id = ctx.author.id
+
+    result = await save_image_url(author_id, location_name, message)
+
+    if result:
+        await ctx.send(result)
+    else:
+        await ctx.send("Something went wrong while saving your image.")
+    
+
 
 @bot.command(name="logout", help="Logs the bot out of Discord. Bot owner only.")
 @commands.is_owner()
