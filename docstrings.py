@@ -1,22 +1,24 @@
 saveDocString = '''
-    Format: !saveLocation location_name 'X Y Z'
+    !save location_name 'X Y Z'
     ''' 
 getDocString = '''
-    Format: !getLocation location_name.
     If you save a name as 'Nether', retrive it using !getLocation 'Nether'
     If a name is saved as Nether, retrieve it using !getLocation Nether
+    !get location_name.
     '''
 updateDocString = '''
-    Format: !updateLocation location_name"
+    !update location_name"
 '''
 deleteDocString = '''
-    Format: !deleteLocation location_name
+    !delete location_name
 '''
 listDocString = '''
     See all locations you have saved.
 '''
-addImgDocString='''
-    Add an image to your location.
+saveImgDocString='''
+    Store an image for a saved place.
+    Send an attachment when using this function
+    !saveImage location_name 
 '''
 
 helpDocString = '''

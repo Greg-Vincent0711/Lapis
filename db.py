@@ -1,7 +1,7 @@
 # db.py
 import boto3
 from botocore.exceptions import ClientError
-from s3_fns import uploadImage, deleteImage
+from s3_fns import storeImageToS3, deleteImage
 from encryption import encrypt, decrypt, generate_hash
 from utils import extract_decrypted_locations
 import os
@@ -35,7 +35,12 @@ def get_location(author_id, location_name):
         if 'Item' in res:
             encryptedCoordinates = res['Item']['Coordinates']
             retrieved_coordinates = decrypt(encryptedCoordinates.encode()).decode()
-            return retrieved_coordinates
+            if "Image_URL" in res['Item']:
+                encryptedURL = res['Item']['Image_URL']
+                retrieved_URL = decrypt(encryptedURL.encode()).decode()
+                return retrieved_coordinates, retrieved_URL
+            else:
+                return retrieved_coordinates
         else: 
             return None
     
@@ -59,6 +64,7 @@ def delete_location(author_id, location_name):
         raise e
 
 def update_location(author_id, location_name, new_coords):
+    
     try:
         res =  TABLE.update_item(
             Key={
@@ -92,8 +98,9 @@ def list_locations(author_id):
     except ClientError as e:
         raise e
 
-async def save_image_url(author_id,location_name, message):
-    image_url = await uploadImage(message)
+
+async def save_image_url(author_id,location_name,message):
+    image_url = await storeImageToS3(message)
     try:
         res = TABLE.update_item(
             Key={
@@ -107,7 +114,7 @@ async def save_image_url(author_id,location_name, message):
             ReturnValues="UPDATED_NEW",
         )
         if "Attributes" in res:
-            return "Saved an image for your location."
+            return "Saved an image URL for your location."
         else:
             return None
     except Exception as e:

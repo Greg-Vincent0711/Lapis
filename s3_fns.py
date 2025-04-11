@@ -1,25 +1,45 @@
 import requests
 import boto3
+from botocore.exceptions import BotoCoreError, ClientError
 import os
 import re
 from io import BytesIO
+import mimetypes
+from exceptions import *
 
 BUCKET = os.getenv('BUCKET_NAME')
-s3Instance = boto3.resource('s3')
+s3Instance = boto3.client('s3')
 fileNameRegex = r"https://[^/]+\.s3\.amazonaws\.com/(.+)"
-async def uploadImage(message) -> str:
+
+async def storeImageToS3(message) -> str | None:
     if message.author.bot:
-        return
+        raise ValueError("Ignoring bot message.")
+    if not message.attachments:
+        print("Caught an error")
+        raise ValueError("!saveImage requires an image.")
     
-    if message.attachment.content_type.startswith("image/"):
-        img_data = requests.get(message.attachment.url).content
-        filename = f"uploads/{message.attachment.filename}"
+    image = message.attachments[0]
+    fileName = image.filename.lower()
+    fileExtension = mimetypes.guess_extension(image.content_type)
+    if not image.content_type or fileExtension not in {".jpg", ".jpeg", ".png"}:
+        raise InvalidImageFormatError("Attachment you're trying to upload is not in the correct format.")
+    else:
         try:
-            s3Instance.upload_fileobj(BytesIO(img_data), BUCKET, filename, ExtraArgs={"ACL": "public-read"})
-            return f"https://{BUCKET}.s3.amazonaws.com/{filename}"
-        except Exception as e:
-            return f"There was an error uploading your file: {e}"
-            
+            imgFromChannel = requests.get(image.url, timeout=10)
+            imgFromChannel.raise_for_status()
+            img_data = imgFromChannel.content
+        except requests.exceptions.RequestException as e:
+            raise ImageDownloadError(f"Image download failed: {e}")
+        fileName = f"uploads/{image.filename}"
+        try:
+            s3Instance.upload_fileobj(
+                BytesIO(img_data),
+                BUCKET,
+                fileName,
+            )
+            return f"https://{BUCKET}.s3.amazonaws.com/{fileName}"
+        except (BotoCoreError, ClientError, Exception) as e:
+            raise S3UploadError(f"S3 upload failed: {e}")
 
 async def deleteImage(message, file_url):
     if message.author.bot:
