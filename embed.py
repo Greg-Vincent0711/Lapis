@@ -1,17 +1,17 @@
 import discord
 from discord import Color
 
-def makeEmbed(title = None, displayName = None, description=None, requestedBy=False, url=None):
+def makeEmbed(title = None, authorName = None, description=None, requestedBy=False, url=None):
     embedData = {
         "title": title,
         "description": description,
         "color": Color.blue().value,
     }
     embed = discord.Embed.from_dict(embedData)
-    if requestedBy == True:
-        embedData["footer"] = {"text": f"Requested by {displayName}"}
+    if requestedBy and authorName:
+        embed.set_footer(text=f"Requested by {authorName}")
+
     if url:
-        embedData["url"] = url
         embed.set_thumbnail(url=url)    
     return embed
 

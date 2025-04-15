@@ -35,12 +35,12 @@ def get_location(author_id, location_name):
         if 'Item' in res:
             encryptedCoordinates = res['Item']['Coordinates']
             retrieved_coordinates = decrypt(encryptedCoordinates.encode()).decode()
-            if "Image_URL" in res['Item']:
+            if res['Item'].get("Image_URL"):
                 encryptedURL = res['Item']['Image_URL']
                 retrieved_URL = decrypt(encryptedURL.encode()).decode()
-                return retrieved_coordinates, retrieved_URL
+                return [retrieved_coordinates, retrieved_URL]
             else:
-                return (retrieved_coordinates,)
+                return [retrieved_coordinates]
         else: 
             return None
     
@@ -84,6 +84,9 @@ def update_location(author_id, location_name, new_coords):
     except ClientError as e:
         raise e
 
+'''
+TODO - Scale this fn in the future, pagination, grabbing so many elements at a time, etc
+'''
 def list_locations(author_id):
     try:
         response = TABLE.query(
@@ -91,7 +94,11 @@ def list_locations(author_id):
         )
         encrypted_locations = [item for item in response['Items']]
         unencrypted_locations = extract_decrypted_locations(encrypted_locations)
-        return "\n".join([f"{p['Location_Name']} — {p['Coordinates']}" for p in unencrypted_locations])
+        # if the image URL exists, add it as a link for a specific location
+        return "\n".join([ f"[{p['Location_Name']}]({p['Image_URL']}) — {p['Coordinates']}" if 'Image_URL' in p 
+                          else f"{p['Location_Name']} — {p['Coordinates']}"
+                        for p in unencrypted_locations
+                    ])
     except ClientError as e:
         raise e
 

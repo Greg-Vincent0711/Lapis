@@ -30,10 +30,14 @@ def extract_decrypted_locations(encryptedData):
     decryptedLocations = []
     for entry in encryptedData:
         try:
-            decryptedLocations.append({
+            decrypted_entry = {
                 'Location_Name': decrypt(entry['Location_Name']).decode(),
                 'Coordinates': decrypt(entry['Coordinates']).decode()
-            })
+            }
+            image_url_encrypted = entry.get("Image_URL")
+            if image_url_encrypted:
+                decrypted_entry["Image_URL"] = decrypt(image_url_encrypted.encode()).decode()
+            decryptedLocations.append(decrypted_entry)
         except Exception as e:
             print(f"Error decrypting an item: {e}")
     return decryptedLocations
