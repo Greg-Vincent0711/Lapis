@@ -40,7 +40,7 @@ def get_location(author_id, location_name):
                 retrieved_URL = decrypt(encryptedURL.encode()).decode()
                 return retrieved_coordinates, retrieved_URL
             else:
-                return retrieved_coordinates
+                return (retrieved_coordinates,)
         else: 
             return None
     
@@ -64,7 +64,6 @@ def delete_location(author_id, location_name):
         raise e
 
 def update_location(author_id, location_name, new_coords):
-    
     try:
         res =  TABLE.update_item(
             Key={
@@ -82,8 +81,6 @@ def update_location(author_id, location_name, new_coords):
             return decrypt(res['Attributes']['Coordinates']).decode()
         else:
             return None
-            
-        
     except ClientError as e:
         raise e
 

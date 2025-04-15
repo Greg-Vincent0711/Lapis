@@ -1,10 +1,14 @@
 saveDocString = '''
-    !save location_name 'X Y Z'
+    !save location_name "X Y Z"
+    Use double quotes for any spaces.
+    !save Nether "34 -20 221"
+    !save "Nether Hub" "32 121 120"
     ''' 
 getDocString = '''
-    If you save a name as 'Nether', retrive it using !getLocation 'Nether'
-    If a name is saved as Nether, retrieve it using !getLocation Nether
     !get location_name.
+    If you save a name as 'Nether', retrive it using !get 'Nether'
+    If a name is saved as Nether, retrieve it using !get Nether
+    !get "Villager Center" - use double quotes for spaces
     '''
 updateDocString = '''
     !update location_name"

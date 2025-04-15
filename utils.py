@@ -36,7 +36,6 @@ def extract_decrypted_locations(encryptedData):
             })
         except Exception as e:
             print(f"Error decrypting an item: {e}")
-    print(decryptedLocations)
     return decryptedLocations
 
 def format_coords(coord_string: str) -> str:

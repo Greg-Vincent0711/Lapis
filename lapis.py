@@ -37,15 +37,18 @@ async def saveLocation(ctx, locationName: str, locationCoords: str):
     nameCheck = isCorrectLength(locationName)
     # both of these fns return error messages if not True
     if nameCheck is not True:
-        await ctx.send(f"{nameCheck}")
+        await ctx.send(embed=makeErrorEmbed("Error", f"{nameCheck}"))
     
     elif coordCheck is not True:
-        await ctx.send(f"{coordCheck}")
+        await ctx.send(embed=makeErrorEmbed("Error", f"{coordCheck}"))
     else:
         try:
             formattedCoords = format_coords(locationCoords)
             save_location(ctx.author.id, locationName, formattedCoords)
             await ctx.send(embed=makeEmbed(f"{locationName} has been saved.", ctx.author.display_name, formattedCoords, requestedBy=True))
+            if ctx.message.attachments:
+                # users can optionally save an image when first saving a location
+                saveImage(ctx.message)
         except Exception as e:
             await ctx.send(embed=makeErrorEmbed("Error saving your message.", {e}))
 
@@ -55,14 +58,17 @@ async def saveLocation(ctx, locationName: str, locationCoords: str):
 async def getLocation(ctx, locationName: str):
     nameCheck = isCorrectLength(locationName)
     if nameCheck is not True:
-        await ctx.send(f"{nameCheck}")
+        await ctx.send(embed=makeErrorEmbed("Error", f"{nameCheck}"))
     else:
         try:
             # always contains coordinates, may contain an image URL 
             retrieved_data = get_location(ctx.author.id, locationName)
-            if retrieved_data is not None: 
-                url = retrieved_data[1] if retrieved_data[1] is not None else None
-                await ctx.send(embed=makeEmbed(f"{retrieved_data[0]}", ctx.author.display_name, requestedBy=True, url=url))
+            print(retrieved_data)
+            if retrieved_data is not None:
+                if retrieved_data[1] is not None:
+                    await ctx.send(embed=makeEmbed(f"{retrieved_data[0]}", ctx.author.display_name, requestedBy=True, url=retrieved_data[1]))
+                else:
+                    await ctx.send(embed=makeEmbed(f"{retrieved_data[0]}", ctx.author.display_name, requestedBy=True))
             else:
                 await ctx.send(embed=makeErrorEmbed(f"No location with that name found.", f"Call !list to see all locations."))
         except ClientError as e:
@@ -148,7 +154,7 @@ async def help_command(ctx):
         if not command.hidden:
             help_text += f"**!{command.name}** - {command.help or 'No description provided.'}\n"
 
-    await ctx.send(embed=makeEmbed("Lapis' Commands", help_text))
+    await ctx.send(embed=makeEmbed("Lapis' Commands", description=help_text))
 
 @bot.command(name="logout", help="Logs the bot out of Discord. Bot owner only.")
 @commands.is_owner()

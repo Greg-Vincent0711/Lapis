@@ -8,7 +8,7 @@ def makeEmbed(title = None, displayName = None, description=None, requestedBy=Fa
         "color": Color.blue().value,
     }
     embed = discord.Embed.from_dict(embedData)
-    if requestedBy:
+    if requestedBy == True:
         embedData["footer"] = {"text": f"Requested by {displayName}"}
     if url:
         embedData["url"] = url
