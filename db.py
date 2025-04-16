@@ -1,7 +1,7 @@
 # db.py
 import boto3
 from botocore.exceptions import ClientError
-from s3_fns import storeImageToS3, deleteImage
+from s3_fns import storeImageInS3, deleteImage
 from encryption import encrypt, decrypt, generate_hash
 from utils import extract_decrypted_locations
 import os
@@ -57,7 +57,7 @@ def delete_location(author_id, location_name):
             ReturnValues="ALL_OLD"
         )
         if 'Attributes' in res:
-            return decrypt(res["Attributes"]["Coordinates"]).decode()
+            return "Successfully deleted your location."
         else:
             return None
     except ClientError as e:
@@ -104,7 +104,7 @@ def list_locations(author_id):
 
 
 async def save_image_url(author_id,location_name,message):
-    image_url = await storeImageToS3(message)
+    image_url = await storeImageInS3(message)
     try:
         res = TABLE.update_item(
             Key={
@@ -122,8 +122,22 @@ async def save_image_url(author_id,location_name,message):
         else:
             return None
     except Exception as e:
-        print(e)
+        raise e
         
 
-def delete_image_url(author_id,location_name, message):
-    pass
+async def delete_image_url(author_id, location_name):
+    try:
+        res = TABLE.update_item(
+            Key={
+                "Author_ID": str(author_id),
+                "Location": generate_hash(location_name)
+            },
+            UpdateExpression="REMOVE Image_URL",
+            ReturnValues="ALL_OLD"
+        )
+        if "Attributes" in res:
+            deleteURL = decrypt(res['Attributes']['Image_URL']).decode()
+            await deleteImage(deleteURL)
+    except Exception as e:
+        raise e
+            

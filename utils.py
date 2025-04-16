@@ -9,9 +9,7 @@ def isCorrectLength(name: str) -> str | bool:
 
 # Checks for coord format and bounds of the coords sent
 def isCorrectCoordFormat(coordinates: str) -> str | bool:
-    print(coordinates)
     match = re.fullmatch(r"\s*(-?\d+)\s*[,\s]+\s*(-?\d+)\s*[,\s]+\s*(-?\d+)\s*", coordinates)
-    print(match)
     if not match:
         return "Incorrect format. Use double quotes around your numeric coordinates in the form 'X Y Z' or 'X,Y,Z'."
     try:

@@ -15,6 +15,8 @@ updateDocString = '''
 '''
 deleteDocString = '''
     !delete location_name
+    This will automatically delete any corresponding image for a location.
+    If you want to delete specifically the image, call !deleteImg location_name
 '''
 listDocString = '''
     See all locations you have saved.
@@ -23,6 +25,10 @@ saveImgDocString='''
     Store an image for a saved place.
     Send an attachment when using this function
     !saveImage location_name 
+'''
+deleteImgDocString = '''
+    Delete an image stored for a location.
+    If you'd like to replace an image instead, use saveImage with the same location name. 
 '''
 
 helpDocString = '''

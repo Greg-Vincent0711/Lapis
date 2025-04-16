@@ -45,12 +45,12 @@ async def saveLocation(ctx, locationName: str, locationCoords: str):
         try:
             formattedCoords = format_coords(locationCoords)
             save_location(ctx.author.id, locationName, formattedCoords)
-            await ctx.send(embed=makeEmbed(title=f"{locationName} has been saved.", authorName=ctx.author.display_name, description=formattedCoords, requestedBy=True))
             if ctx.message.attachments:
                 # users can optionally save an image when first saving a location
-                saveImage(ctx.message)
+                await saveImage(ctx, locationName)
+            await ctx.send(embed=makeEmbed(title=f"{locationName} has been saved.", authorName=ctx.author.display_name, description=formattedCoords, requestedBy=True))
         except Exception as e:
-            await ctx.send(embed=makeErrorEmbed("Error saving your message.", {e}))
+            await ctx.send(embed=makeErrorEmbed("Error saving your location and coordinates.", {e}))
 
 
 @commands.cooldown(RATE, PER, commands.BucketType.user)
@@ -83,9 +83,9 @@ async def deleteLocation(ctx, locationName: str):
         await ctx.send(f"{nameCheck}")
     else:
         try:
-            deleted_coords = delete_location(ctx.author.id, locationName)
-            if deleted_coords != None:
-                await ctx.send(embed=makeEmbed(title=f"{locationName} has been deleted.", authorName=ctx.author.display_name, description=deleted_coords, requestedBy=True))
+            result = await delete_location(ctx.author.id, locationName)
+            if result != None:
+                await ctx.send(embed=makeEmbed(title="Success", authorName=ctx.author.display_name, description=result, requestedBy=True))
             else:
                 await ctx.send(embed=makeErrorEmbed(f"No matching location found for '{locationName}'. Call !list to see all locations you have created."))
         except ClientError as e:
@@ -131,20 +131,40 @@ async def list_locations_for_player(ctx):
         await ctx.send(embed=makeErrorEmbed("Try this command again later.", {e}))
 
 @commands.cooldown(RATE, PER * 2, commands.BucketType.user)
-@bot.command(name="saveImage", help=saveDocString)
+@bot.command(name="saveImg", help=saveImgDocString)
 async def saveImage(ctx, location_name):
-    try:
+    nameCheck = isCorrectLength(location_name)
+    if nameCheck is not True:
+        await ctx.send(embed=makeErrorEmbed("Error", nameCheck))
+    else: 
         message = ctx.message
-        author_id = ctx.author.id
-        result = await save_image_url(author_id, location_name, message)
-        if result:
-            await ctx.send(embed=makeEmbed(title=f"{location_name} now has a corresponding image."))
-        else:
-            await ctx.send(embed=makeErrorEmbed("Image not saved", "Failed to update the database."))
-    except (ValueError, InvalidImageFormatError, ImageDownloadError, S3UploadError) as e:
-        print(e)
-        await ctx.send(embed=makeErrorEmbed("Error saving your image.", str(e)))
+        if message.author.bot:
+            await ctx.send(embed=makeErrorEmbed("Error","Ignoring message from bot."))  
+        else:     
+            try:
+                author_id = ctx.author.id
+                result = await save_image_url(author_id, location_name, message)
+                if result is not None:
+                    await ctx.send(embed=makeEmbed(title="Success!", description=result))
+                else:
+                    await ctx.send(embed=makeErrorEmbed("Image not saved", "Failed to update the database. Try again later."))
+            except (ValueError, InvalidImageFormatError, ImageDownloadError, S3UploadError) as e:
+                await ctx.send(embed=makeErrorEmbed("Error saving your image.", str(e)))
+
+@commands.cooldown(RATE, PER * 2, commands.BucketType.user)
+@bot.command(name="deleteImg", help=deleteImgDocString)
+async def deleteImage(ctx, locationName):
+    nameCheck = isCorrectLength(locationName)
+    if nameCheck is not True:
+        await ctx.send(embed=makeErrorEmbed("Error", nameCheck))
+    else:
+        try:
+            await delete_image_url(ctx.author.id, locationName)
+            await ctx.send(embed=makeEmbed("Successful image deletion.", ctx.author.display_name, f"For location {locationName}", requestedBy=True))
+        except Exception as e:
+            await ctx.send(embed=makeErrorEmbed("Error deleting image.", str(e)))
         
+
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="helpme", help=helpDocString)
 async def help_command(ctx):

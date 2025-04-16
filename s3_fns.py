@@ -11,13 +11,7 @@ BUCKET = os.getenv('BUCKET_NAME')
 s3Instance = boto3.client('s3')
 fileNameRegex = r"https://[^/]+\.s3\.amazonaws\.com/(.+)"
 
-async def storeImageToS3(message) -> str | None:
-    if message.author.bot:
-        raise ValueError("Ignoring bot message.")
-    if not message.attachments:
-        print("Caught an error")
-        raise ValueError("!saveImage requires an image.")
-    
+async def storeImageInS3(message) -> str | None:
     image = message.attachments[0]
     fileName = image.filename.lower()
     fileExtension = mimetypes.guess_extension(image.content_type)
@@ -41,16 +35,14 @@ async def storeImageToS3(message) -> str | None:
         except (BotoCoreError, ClientError, Exception) as e:
             raise S3UploadError(f"S3 upload failed: {e}")
 
-async def deleteImage(message, file_url):
-    if message.author.bot:
-        return
-    matchingFileName = re.match(r"https://[^/]+\.s3\.amazonaws\.com/(.+)", file_url)
+async def deleteImage(file_url):
+    matchingFileName = re.match(fileNameRegex, file_url)
     if matchingFileName:
         fileName = matchingFileName.group(1)
         try:
             s3Instance.delete_object(Bucket=BUCKET, Key=fileName)
             return f"Successfully deleted https://{BUCKET}.s3.amazonaws.com/{fileName}"
         except Exception as e:
-            return f"There was an error deleting your image: {e}"
+            raise S3DeleteError(f"There was an error deleting your image: {e}")
     else:
-        return "Could not find the image you were looking for. Be sure it exists with !list."
+        raise ValueError("Could not find the image you were looking for. Be sure it exists with !list.")
