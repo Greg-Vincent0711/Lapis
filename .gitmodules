@@ -1,0 +1,3 @@
+[submodule "external/cubiomes"]
+	path = external/cubiomes
+	url = https://github.com/Greg-Vincent0711/cubiomes.git
