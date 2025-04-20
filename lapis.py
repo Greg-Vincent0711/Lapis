@@ -12,8 +12,8 @@ from db import *
 
 '''
 TODO
-s3 operations
-Map integration with Dynmap, Chunkbase maybe
+Tests
+Seed Integration with Cubiomes - Bedrock Version
 '''
 
 load_dotenv()
