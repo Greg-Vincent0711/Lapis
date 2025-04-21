@@ -55,14 +55,14 @@ Pos nearestBiome(char *biome, int xCoord, int yCoord, int zCoord, int range){
 int main(int argc, char *argv[]){
     char *command = argv[1];
     char *argument = argv[2];
-    if(strcmp(command, "nearestBiome") == 0){
+    if(strcmp(command, "nearest") == 0){
         int xCoord = atoi(argv[3]);
         int yCoord = atoi(argv[4]); 
         int zCoord = atoi(argv[5]);
         int searchRange = atoi(argv[6]);
         Pos biomeCoords = nearestBiome(argument, xCoord, yCoord, zCoord, searchRange);
         printf("%d, %d", biomeCoords.x, biomeCoords.z);
-    } else if(strcmp(command, "random")){
+    } else if(strcmp(command, "nearest")){
         
     } else if(strcmp(command, "spawn_near")){
 

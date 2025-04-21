@@ -1,13 +1,57 @@
 #include <stdio.h>
 #include <string.h>
 #include "../external/cubiomes/biomes.h"
+#include "../external/cubiomes/finders.h"
 
 typedef struct {
     const char *name;
     enum BiomeID id;
 } BiomeLookup;
-
 #define BIOME_ENTRY(name) {#name, name}
+
+typedef struct {
+    const char *name;
+    enum StructureType id;
+} StructureLookup;
+#define STRUCTURE_ENTRY(name) {#name, name}
+
+StructureLookup structure_map[] = {
+    STRUCTURE_ENTRY(Desert_Pyramid),
+    STRUCTURE_ENTRY(Jungle_Temple),
+    STRUCTURE_ENTRY(Jungle_Pyramid) ,
+    STRUCTURE_ENTRY(Swamp_Hut),
+    STRUCTURE_ENTRY(Igloo),
+    STRUCTURE_ENTRY(Village),
+    STRUCTURE_ENTRY(Ocean_Ruin),
+    STRUCTURE_ENTRY(Shipwreck),
+    STRUCTURE_ENTRY(Monument),
+    STRUCTURE_ENTRY(Mansion),
+    STRUCTURE_ENTRY(Outpost),
+    STRUCTURE_ENTRY(Ruined_Portal),
+    STRUCTURE_ENTRY(Ruined_Portal_N),
+    STRUCTURE_ENTRY(Ancient_City),
+    STRUCTURE_ENTRY(Treasure),
+    STRUCTURE_ENTRY(Mineshaft),
+    STRUCTURE_ENTRY(Desert_Well),
+    STRUCTURE_ENTRY(Geode),
+    STRUCTURE_ENTRY(Fortress),
+    STRUCTURE_ENTRY(Bastion),
+    STRUCTURE_ENTRY(End_City),
+    STRUCTURE_ENTRY(End_Gateway),
+    STRUCTURE_ENTRY(End_Island),
+    STRUCTURE_ENTRY(Trail_Ruins),
+    STRUCTURE_ENTRY(Trial_Chambers),
+};
+
+int NUM_STRUCTURES = sizeof(structure_map) / sizeof(structure_map[0]);
+enum StructureType get_structure_id(const char *structure) {
+    for (int entry = 0; entry < NUM_STRUCTURES; entry++) {
+        if (strcmp(structure, structure_map[entry].name) == 0) {
+            return structure_map[entry].id;
+        }
+    }
+    return -1;
+}
 
 BiomeLookup biome_map[] = {
     BIOME_ENTRY(ocean), 
@@ -109,8 +153,6 @@ BiomeLookup biome_map[] = {
     BIOME_ENTRY(cherry_grove),
     BIOME_ENTRY(pale_garden),
 };
-
-
 int NUM_BIOMES = sizeof(biome_map) / sizeof(biome_map[0]);
 
 enum BiomeID get_biome_id(const char *biome) {

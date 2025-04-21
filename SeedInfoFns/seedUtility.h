@@ -4,4 +4,5 @@
  * the C portion needs to check what the type of the parameter is
 */
 enum BiomeID get_biome_id(const char *biome);
+enum StructureID get_structure_id(const char* structure);
 Pos nearestBiome(char *biome, int xCoord, int yCoord, int zCoord, int range);
