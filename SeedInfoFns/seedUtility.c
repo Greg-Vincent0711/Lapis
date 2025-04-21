@@ -10,28 +10,28 @@ typedef struct {
 #define BIOME_ENTRY(name) {#name, name}
 
 BiomeLookup biome_map[] = {
-    BIOME_ENTRY(ocean),
+    BIOME_ENTRY(ocean), 
     BIOME_ENTRY(plains),
     BIOME_ENTRY(desert),
     BIOME_ENTRY(mountains),
     BIOME_ENTRY(extremeHills),
-    BIOME_ENTRY(forest),
+    BIOME_ENTRY(forest), 
     BIOME_ENTRY(taiga),
-    BIOME_ENTRY(swamp),
+    BIOME_ENTRY(swamp), 
     BIOME_ENTRY(swampland),
     BIOME_ENTRY(river),
     BIOME_ENTRY(nether_wastes),
-    BIOME_ENTRY(hell),
+    BIOME_ENTRY(hell), 
     BIOME_ENTRY(the_end),
     BIOME_ENTRY(frozen_ocean),
     BIOME_ENTRY(frozen_river),
     BIOME_ENTRY(snowy_tundra),
     BIOME_ENTRY(snowy_mountains),
     BIOME_ENTRY(mushroom_fields),
-    BIOME_ENTRY(mushroom_field_shore),
+    BIOME_ENTRY(mushroom_field_shore), 
     BIOME_ENTRY(beach),
-    BIOME_ENTRY(desert_hills),
-    BIOME_ENTRY(wooded_hills),
+    BIOME_ENTRY(desert_hills), 
+    BIOME_ENTRY(wooded_hills), 
     BIOME_ENTRY(taiga_hills),
     BIOME_ENTRY(mountain_edge),
     BIOME_ENTRY(jungle),
@@ -67,11 +67,12 @@ BiomeLookup biome_map[] = {
     BIOME_ENTRY(seasonal_forest),
     BIOME_ENTRY(rainforest),
     BIOME_ENTRY(shrubland),
+    // IDS greater than 64 below
     BIOME_ENTRY(the_void),
-    BIOME_ENTRY(sunflower_plains),
-    BIOME_ENTRY(desert_lakes),
-    BIOME_ENTRY(gravelly_mountains),
-    BIOME_ENTRY(flower_forest),
+    BIOME_ENTRY(sunflower_plains),// slightly off
+    BIOME_ENTRY(desert_lakes), // not in current game version
+    BIOME_ENTRY(gravelly_mountains), // not fully accurate
+    BIOME_ENTRY(flower_forest), // not fully accurate
     BIOME_ENTRY(taiga_mountains),
     BIOME_ENTRY(swamp_hills),
     BIOME_ENTRY(ice_spikes),
@@ -86,7 +87,7 @@ BiomeLookup biome_map[] = {
     BIOME_ENTRY(modified_gravelly_mountains),
     BIOME_ENTRY(shattered_savanna),
     BIOME_ENTRY(shattered_savanna_plateau),
-    BIOME_ENTRY(eroded_badlands),
+    BIOME_ENTRY(eroded_badlands), // works
     BIOME_ENTRY(modified_wooded_badlands_plateau),
     BIOME_ENTRY(modified_badlands_plateau),
     BIOME_ENTRY(bamboo_jungle),
@@ -118,5 +119,5 @@ enum BiomeID get_biome_id(const char *biome) {
             return biome_map[entry].id;
         }
     }
-    return none;
+    return -1;
 }

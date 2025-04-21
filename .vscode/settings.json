@@ -3,6 +3,7 @@
         "generator.h": "c",
         "finders.h": "c",
         "util.h": "c",
-        "biomes.h": "c"
+        "biomes.h": "c",
+        "seedutility.h": "c"
     }
 }

@@ -20,11 +20,11 @@ seedInfoFns: $(OBJS)
 clean:
 	rm -f *.o *.a
 
-cleanExec:
-	rm seedInfoFns
+cleanhard:
+	rm -f *.o *.a seedInfoFns
 
-tryExample:
-	./seedInfoFns nearestBiome Plains 0 0 0 1024
+try:
+	./seedInfoFns nearestBiome eroded_badlands 0 0 0 900
 
 .PHONY: help
 
