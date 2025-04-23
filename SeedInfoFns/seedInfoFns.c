@@ -17,15 +17,12 @@ void setUpBiomeGenerator(){
  * for now, the seed is going to have to be hardcoded
  * returns 2d coords for biome (x and z)
 */
-Pos nearestBiome(char *biome, int xCoord, int yCoord, int zCoord, int range){ 
+Pos nearestBiome(char *biome, int xCoord, int yCoord, int zCoord, int range, enum BiomeID bID){ 
     setUpBiomeGenerator();
-    enum BiomeID bID = get_biome_id(biome);
-    printf("%d\n", bID);
     if (bID < 0) {
         fprintf(stderr, "Error: Unknown biome name '%s'\n", biome);
         return (Pos){-1, -1};
     }
-    
     uint64_t rand = 1;
     uint64_t validBiome = (1ULL << bID);
     setSeed(&rand, TEST_SEED);
@@ -33,17 +30,18 @@ Pos nearestBiome(char *biome, int xCoord, int yCoord, int zCoord, int range){
                         xCoord, yCoord, zCoord, range, validBiome, 0, &rand, NULL); 
 }
 
-// int nearestStructure(char *structure, char *coordinates){
-//     Generator biomeGenerator;
-//     setupGenerator(&biomeGenerator, MC_NEWEST, 0);
-//     uint64_t TEST_SEED = 6815923762915875509;
-//     applySeed(&biomeGenerator, DIM_OVERWORLD, TEST_SEED);
-//     Pos biomeCoordinates;
-
-//     int block_scale = 1; // scale=1: block coordinates, scale=4: biome coordinates
-//     int x = 305, y = 63, z = 931;    
-//     return 0;
-// }
+Pos nearestStructure(enum StructureType sType, int xCoord, int zCoord){
+    setUpBiomeGenerator();
+    Pos structureCoords;
+    int structureCheck = isViableStructurePos(sType, &biomeGenerator, xCoord, zCoord, 0);
+    if (structureCheck == 1){
+        getStructurePos(sType, MC_NEWEST, TEST_SEED, xCoord, zCoord, &structureCoords);
+        printf("Nearest structure coords, X:%d, Z:%d", structureCoords.x, structureCoords.z);
+        return structureCoords;
+    } else{
+        return (Pos){0, 0};
+    }
+}
 
 /**
  * !nearestBiome
@@ -57,12 +55,20 @@ int main(int argc, char *argv[]){
     char *argument = argv[2];
     if(strcmp(command, "nearest") == 0){
         int xCoord = atoi(argv[3]);
-        int yCoord = atoi(argv[4]); 
+        int yCoord = atoi(argv[4]);
         int zCoord = atoi(argv[5]);
         int searchRange = atoi(argv[6]);
-        Pos biomeCoords = nearestBiome(argument, xCoord, yCoord, zCoord, searchRange);
-        printf("%d, %d", biomeCoords.x, biomeCoords.z);
-    } else if(strcmp(command, "nearest")){
+        enum BiomeID bID = get_biome_id(argument);
+        enum StructureType sType = get_structure_id(argument);
+        if(bID != -1){
+            Pos biomeCoords = nearestBiome(argument, xCoord, yCoord, zCoord, searchRange, bID);
+            printf("Nearest biome: %d, %d", biomeCoords.x, biomeCoords.z);
+        } else if(sType != -1){
+            Pos structureCoords = nearestStructure(sType, xCoord, zCoord);
+            printf("Nearest structure: %d, %d", structureCoords.x, structureCoords.z);
+        } else {
+            printf("Invalid argument. Make sure you used the correct Biome or Structure name. Check spelling.\n");
+        }
         
     } else if(strcmp(command, "spawn_near")){
 
