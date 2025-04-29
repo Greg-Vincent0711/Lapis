@@ -9,15 +9,21 @@
 Generator biomeGenerator;
 uint64_t TEST_SEED = 6815923762915875509;
 
+/**
+ * TODO - Dimension should be editable based on what the user wants to search for
+ * Same with MC version. 
+ * Should be editable on frontend
+*/
 void setUpBiomeGenerator(){
     setupGenerator(&biomeGenerator, MC_NEWEST, 0);
     applySeed(&biomeGenerator, DIM_OVERWORLD, TEST_SEED);
 }
+
 /**
- * corresponds to !nearest <biome> coords range for Lapis
+ * Corresponds to !nearest <biome> coords range for Lapis
  * for now, the seed is going to have to be hardcoded
  * returns 2d coords for biome (x and z)
- * Relatively accurate for Bedrock and Java
+ * Relatively accurate for Bedrock and Java, since they share the same world gen
 */
 Pos nearestBiome(char *biome, int xCoord, int yCoord, int zCoord, int range, enum BiomeID bID){ 
     setUpBiomeGenerator();
@@ -131,12 +137,43 @@ Pos nearestStructure(enum StructureType sType, int blockX, int blockZ, int maxRa
     return structureCoords;
 }
 
+
 /**
- * Returns a seed with the specified spawn conditions
- * Think of this as a mixture of nearestStructure and Biome
+ * Returns a seed or multiple with the specified spawn conditions
+ * May not be entirely accurate
 */
-long spawnNear(){
-    return 0;
+long* spawnNear(int seedAmount, enum BiomeID bID, enum StructureType sID, int structureRange){
+    // error check parameters, then stuff below
+    setUpBiomeGenerator();
+    long *foundSeeds = malloc(sizeof(long) * seedAmount); 
+    int amountFound = 0;
+    // for now, 1 million seeds is enough
+    for (long count = 0; count < 1000000; count++)
+    {
+        applySeed(&biomeGenerator, DIM_OVERWORLD, count);
+        Pos spawn = getSpawn(&biomeGenerator);
+        // check if in the correct biome
+        if (bID == getBiomeAt(&biomeGenerator, 1, spawn.x, 0, spawn.z)){
+            // check if correct structure is within structureRange(in blocks)
+            Pos structure = nearestStructure(sID, spawn.x, spawn.z, structureRange);
+            if(structure.x != -1 && structure.z != -1){
+                foundSeeds[amountFound] = count;
+                seedAmount--;
+                amountFound++;
+            } else{
+                continue;
+            }
+        } else{
+            continue;
+        }
+        if(seedAmount == 0){
+            break;
+        }
+    }
+    if (amountFound != seedAmount){
+        printf("Found %d seeds out of %.", amountFound, seedAmount);
+    }
+    return foundSeeds;
 }
 
 /**
@@ -169,6 +206,11 @@ int main(int argc, char *argv[]){
         }
         
     } else if(strcmp(command, "spawn_near")){
+        // long *seeds = spawnNear(10, argument, );
+        // for (int i = 0; i < sizeof(seeds) / sizeof(seeds[0]); i++){
+        //     printf("Found Seed: %llu\n", seeds[i]);
+        // }
+        // free(seeds);
 
     } else{
         printf("Invalid command. Check the list of all possible commands and try again.");
