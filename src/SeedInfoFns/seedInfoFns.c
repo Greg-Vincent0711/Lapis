@@ -100,7 +100,6 @@ Pos findNearestStructure(enum StructureType sType, int blockX, int blockZ, int m
             }
         }
 
-
     // check if a closer structure exists in any future regions
         if (minDistSq != LONG_MAX) {
             // check within the next max possible radius
@@ -130,6 +129,14 @@ Pos nearestStructure(enum StructureType sType, int blockX, int blockZ, int maxRa
         printf("No structure found within range.\n");
     }
     return structureCoords;
+}
+
+/**
+ * Returns a seed with the specified spawn conditions
+ * Think of this as a mixture of nearestStructure and Biome
+*/
+long spawnNear(){
+    return 0;
 }
 
 /**
