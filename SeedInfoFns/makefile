@@ -24,7 +24,7 @@ cleanhard:
 	rm -f *.o *.a seedInfoFns
 
 try:
-	./seedInfoFns nearestBiome eroded_badlands 0 0 0 900
+	./seedInfoFns nearest Ancient_City 0 0 3
 
 .PHONY: help
 
