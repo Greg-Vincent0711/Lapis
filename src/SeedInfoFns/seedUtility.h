@@ -7,3 +7,27 @@ enum BiomeID get_biome_id(const char *biome);
 enum StructureType get_structure_id(const char* structure);
 Pos findNearestStructure(enum StructureType sType, int blockX, int blockZ, int maxRadius);
 Pos nearestBiome(char *biome, int xCoord, int yCoord, int zCoord, int range, enum BiomeID bID);
+
+typedef struct {
+    const char *name;
+    enum BiomeID id;
+} BiomeLookup;
+#define BIOME_ENTRY(name) {#name, name}
+
+typedef struct {
+    const char *name;
+    enum StructureType id;
+} StructureLookup;
+#define STRUCTURE_ENTRY(name) {#name, name}
+
+
+/**
+ * returns
+ *  int length
+ *  long* data
+*/
+typedef struct {
+    const int length;
+    long* data;
+} SeedArray;
+

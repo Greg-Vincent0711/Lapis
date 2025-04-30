@@ -4,7 +4,7 @@ CC = gcc
 # compilier flags - add cubiomes as a header, integer overflow wrap around
 CFLAGS = -I../external/cubiomes -fwrapv
 # linker flags - cubiomes compiled lib, math library
-LDFLAGS = ../external/cubiomes/libcubiomes.a -lm
+LDFLAGS = ../../external/cubiomes/libcubiomes.a -lm
 
 SRCS = seedInfoFns.c seedUtility.c
 
@@ -24,7 +24,7 @@ cleanhard:
 	rm -f *.o *.a seedInfoFns
 
 try:
-	./seedInfoFns nearest Ancient_City 0 0 3
+	./seedInfoFns spawn_near 1 Plains Village 1000
 
 .PHONY: help
 

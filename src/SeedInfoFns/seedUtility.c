@@ -1,19 +1,8 @@
 #include <stdio.h>
 #include <string.h>
-#include "../external/cubiomes/biomes.h"
-#include "../external/cubiomes/finders.h"
-
-typedef struct {
-    const char *name;
-    enum BiomeID id;
-} BiomeLookup;
-#define BIOME_ENTRY(name) {#name, name}
-
-typedef struct {
-    const char *name;
-    enum StructureType id;
-} StructureLookup;
-#define STRUCTURE_ENTRY(name) {#name, name}
+#include "../../external/cubiomes/biomes.h"
+#include "../../external/cubiomes/finders.h"
+#include "seedUtility.h"
 
 StructureLookup structure_map[] = {
     STRUCTURE_ENTRY(Desert_Pyramid),

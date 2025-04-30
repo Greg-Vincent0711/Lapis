@@ -1,9 +1,8 @@
 #include <stdio.h>
 #include <string.h>
-#include "generator.h"
-#include "finders.h"
+#include "../../external/cubiomes/finders.h"
 #include "seedUtility.h"
-#include "biomes.h"
+#include "../../external/cubiomes/biomes.h"
 #include "limits.h"
 
 Generator biomeGenerator;
@@ -59,10 +58,8 @@ Pos findNearestStructure(enum StructureType sType, int blockX, int blockZ, int m
 
     /**
      * if the maxRadius is 10 or less, treat it like a region radius (maxRadius << 9)
-     * Past 10, it doesn't seem too practical, since most structures a player probably wants to find
-     * is within 5120 blocks. 
-     * 1 <= maxRadius <= 10 == region
-     * maxRadius >= 10, treat it as a block radius
+     * Past 10, it doesn't seem too practical, since most structures a player wants to find
+     * are probably within a 5120 block radius. 
     */
     if (maxRadius >= 11) {
         maxBlockDistSq = (long)maxRadius * (long)maxRadius;
@@ -142,13 +139,17 @@ Pos nearestStructure(enum StructureType sType, int blockX, int blockZ, int maxRa
  * Returns a seed or multiple with the specified spawn conditions
  * May not be entirely accurate
 */
-long* spawnNear(int seedAmount, enum BiomeID bID, enum StructureType sID, int structureRange){
+SeedArray spawnNear(int seedAmount, char* biome, char* structure, int structureRange){
     // error check parameters, then stuff below
     setUpBiomeGenerator();
     long *foundSeeds = malloc(sizeof(long) * seedAmount); 
     int amountFound = 0;
+
+    int bID = get_biome_id(biome);
+    int sID = get_structure_id(structure);
+
     // for now, 1 million seeds is enough
-    for (long count = 0; count < 1000000; count++)
+    for (long count = 0; count < 1000; count++)
     {
         applySeed(&biomeGenerator, DIM_OVERWORLD, count);
         Pos spawn = getSpawn(&biomeGenerator);
@@ -158,6 +159,7 @@ long* spawnNear(int seedAmount, enum BiomeID bID, enum StructureType sID, int st
             Pos structure = nearestStructure(sID, spawn.x, spawn.z, structureRange);
             if(structure.x != -1 && structure.z != -1){
                 foundSeeds[amountFound] = count;
+                printf("%ld", count);
                 seedAmount--;
                 amountFound++;
             } else{
@@ -166,14 +168,15 @@ long* spawnNear(int seedAmount, enum BiomeID bID, enum StructureType sID, int st
         } else{
             continue;
         }
-        if(seedAmount == 0){
-            break;
+        if(amountFound == 0){
+            printf("No seeds found.");
+            return (SeedArray){0 , 0};
         }
     }
     if (amountFound != seedAmount){
-        printf("Found %d seeds out of %.", amountFound, seedAmount);
+        printf("Found %d seeds out of %d.", amountFound, seedAmount);
     }
-    return foundSeeds;
+    return (SeedArray){amountFound, foundSeeds};
 }
 
 /**
@@ -204,16 +207,20 @@ int main(int argc, char *argv[]){
         } else {
             printf("Invalid argument. Make sure you used the correct Biome or Structure name. Check spelling.\n");
         }
-        
-    } else if(strcmp(command, "spawn_near")){
-        // long *seeds = spawnNear(10, argument, );
-        // for (int i = 0; i < sizeof(seeds) / sizeof(seeds[0]); i++){
-        //     printf("Found Seed: %llu\n", seeds[i]);
-        // }
-        // free(seeds);
+        // ./seedInfoFns spawn_near seedAmount biomeID structureID range
+    } else if(strcmp(command, "spawn_near") == 0){
+        int seedAmount = atoi(argv[3]);
+        char* biome = argv[4];
+        char* structure = argv[5];
+        int range = atoi(argv[3]);
+        SeedArray seeds = spawnNear(seedAmount, biome, structure, range);
+        for (int i = 0; i < seeds.length; i++){
+            printf("Found Seed: %ld\n", seeds.data[i]);
+        }
+        free(seeds.data);
 
     } else{
-        printf("Invalid command. Check the list of all possible commands and try again.");
+        printf("Invalid command. Check the list of all possible commands and try again.\n");
     }
     return 0;
 }
