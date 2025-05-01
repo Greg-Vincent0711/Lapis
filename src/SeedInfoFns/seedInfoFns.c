@@ -28,7 +28,7 @@ Pos nearestBiome(char *biome, int xCoord, int yCoord, int zCoord, int range, enu
     setUpBiomeGenerator();
     if (bID < 0) {
         fprintf(stderr, "Error: Unknown biome name '%s'\n", biome);
-        return (Pos){-1, -1};
+        return (Pos){-INT_MAX, -INT_MAX};
     }
     uint64_t rand = 1;
     uint64_t validBiome = (1ULL << bID);
@@ -116,8 +116,8 @@ Pos findNearestStructure(enum StructureType sType, int blockX, int blockZ, int m
     }
 
     if (minDistSq == LONG_MAX) {
-        nearest.x = -1;
-        nearest.z = -1;
+        nearest.x = -INT_MAX;
+        nearest.z = -INT_MAX;
     }
 
     return nearest;
@@ -128,7 +128,7 @@ Pos findNearestStructure(enum StructureType sType, int blockX, int blockZ, int m
 Pos nearestStructure(enum StructureType sType, int blockX, int blockZ, int maxRadius){
     setUpBiomeGenerator();
     Pos structureCoords = findNearestStructure(sType, blockX, blockZ, maxRadius);
-    if (structureCoords.x == -1 && structureCoords.z == -1) {
+    if (structureCoords.x == -INT_MAX && structureCoords.z == -INT_MAX) {
         printf("No structure found within range.\n");
     }
     return structureCoords;
@@ -137,47 +137,80 @@ Pos nearestStructure(enum StructureType sType, int blockX, int blockZ, int maxRa
 
 /**
  * Returns a seed or multiple with the specified spawn conditions
- * May not be entirely accurate
+ *  0<= radiusFromSpawn <= 3000 blocks
 */
-SeedArray spawnNear(int seedAmount, char* biome, char* structure, int structureRange){
-    // error check parameters, then stuff below
-    setUpBiomeGenerator();
-    long *foundSeeds = malloc(sizeof(long) * seedAmount); 
-    int amountFound = 0;
-
+SeedArray spawnNear(int numSeeds, char* biome, char* structure, int radiusFromSpawn){
+    if(numSeeds == 0){
+        fprintf(stderr, "Invalid number of seeds requested");
+        return (SeedArray){-INT_MAX , -INT_MAX};
+    }
     int bID = get_biome_id(biome);
     int sID = get_structure_id(structure);
 
-    // for now, 1 million seeds is enough
-    for (long count = 0; count < 1000; count++)
-    {
+    if(bID == -INT_MAX && sID == -INT_MAX){
+        fprintf(stderr, "Check your spelling. You must provide either a biome or structure as a search parameter.");
+        return (SeedArray){-INT_MAX , -INT_MAX};
+    }
+    if (!(0 <= radiusFromSpawn <= 3000)){
+        fprintf(stderr, "Invalid radius. Must be greater than 0 and no greater than 3000.");
+        return (SeedArray){-INT_MAX , -INT_MAX};
+    }
+
+    setUpBiomeGenerator();
+    long *foundSeeds = malloc(sizeof(long) * numSeeds); 
+
+    if (foundSeeds == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        return (SeedArray){.data = NULL, .length = 0};
+    }
+
+    int amountFound = 0;
+    int targetAmount = numSeeds;
+    // will change in the future to be chosen/not arbitrary
+    int limit = 1000000; 
+
+    uint64_t seedStart = generate_random_seed(limit);
+    for (long count = seedStart; count < seedStart + limit; count++){
         applySeed(&biomeGenerator, DIM_OVERWORLD, count);
         Pos spawn = getSpawn(&biomeGenerator);
-        // check if in the correct biome
-        if (bID == getBiomeAt(&biomeGenerator, 1, spawn.x, 0, spawn.z)){
-            // check if correct structure is within structureRange(in blocks)
-            Pos structure = nearestStructure(sID, spawn.x, spawn.z, structureRange);
-            if(structure.x != -1 && structure.z != -1){
-                foundSeeds[amountFound] = count;
-                printf("%ld", count);
-                seedAmount--;
-                amountFound++;
+        // bID != -1
+        if(bID == getBiomeAt(&biomeGenerator, 1, spawn.x, 0, spawn.z)){
+            // biome && structure match
+            if(sID != -1){
+                Pos structure = findNearestStructure(sID, spawn.x, spawn.z, radiusFromSpawn);
+                if(structure.x != -INT_MAX && structure.z != -INT_MAX){
+                    foundSeeds[amountFound] = count;
+                    amountFound++;
+                }
+            // biome match only
             } else{
-                continue;
+                foundSeeds[amountFound] = count;
+                amountFound++;
             }
-        } else{
-            continue;
         }
-        if(amountFound == 0){
-            printf("No seeds found.");
-            return (SeedArray){0 , 0};
+        // structure match only, bID == -1 and sID == -1 is already accounted for 
+        else{
+            Pos structurePos = findNearestStructure(sID, spawn.x, spawn.z, radiusFromSpawn);
+                if(structurePos.x != -INT_MAX && structurePos.z != -INT_MAX){
+                    foundSeeds[amountFound] = count;
+                    amountFound++;
+                }
+        }
+        if (amountFound < targetAmount) {
+            printf("Found %d seeds out of %d.\n", amountFound, targetAmount);
+        }
+
+        if (amountFound == targetAmount){
+            printf("Found %d seeds.\n", amountFound);
+            break;
         }
     }
-    if (amountFound != seedAmount){
-        printf("Found %d seeds out of %d.", amountFound, seedAmount);
+    if (amountFound == 0) {
+        printf("No seeds found.\n");
     }
-    return (SeedArray){amountFound, foundSeeds};
+    return (SeedArray){.data = foundSeeds, .length = amountFound};
 }
+
 
 /**
  * !nearest - Biome & Structure
@@ -187,6 +220,11 @@ int main(int argc, char *argv[]){
     char *command = argv[1];
     char *argument = argv[2];
     if(strcmp(command, "nearest") == 0){
+        if (argc < 7) {
+            printf("Usage (Biome): ./seedInfoFns nearest <biomeName|structureName> <x> <y> <z> <range>\n");
+            return -1;
+        }
+
         enum BiomeID bID = get_biome_id(argument);
         enum StructureType sType = get_structure_id(argument);
         if(bID != -1){
@@ -198,6 +236,10 @@ int main(int argc, char *argv[]){
             Pos biomeCoords = nearestBiome(argument, xCoord, yCoord, zCoord, searchRange, bID);
             printf("Nearest %s: %d, %d", argument, biomeCoords.x, biomeCoords.z);
         } else if(sType != -1){
+            if (argc < 6) {
+                printf("Usage (Structure): ./seedInfoFns nearest <structureName> <x> <z> <range>\n");
+                return -1;
+            }
             int xCoord = atoi(argv[3]);
             int zCoord = atoi(argv[4]);
             int range = atoi(argv[5]);
@@ -206,20 +248,25 @@ int main(int argc, char *argv[]){
             printf("Nearest %s: %d, %d", argument, structureCoords.x, structureCoords.z);
         } else {
             printf("Invalid argument. Make sure you used the correct Biome or Structure name. Check spelling.\n");
+            return -1;
         }
-        // ./seedInfoFns spawn_near seedAmount biomeID structureID range
     } else if(strcmp(command, "spawn_near") == 0){
-        int seedAmount = atoi(argv[3]);
+        if (argc < 7) {
+            printf("Usage (spawn_near): ./seedInfoFns spawn_near \n");
+            return -1;
+        }
+        int numSeeds = atoi(argv[3]);
         char* biome = argv[4];
         char* structure = argv[5];
-        int range = atoi(argv[3]);
-        SeedArray seeds = spawnNear(seedAmount, biome, structure, range);
+        int range = atoi(argv[6]);
+        SeedArray seeds = spawnNear(numSeeds, biome, structure, range);
         for (int i = 0; i < seeds.length; i++){
             printf("Found Seed: %ld\n", seeds.data[i]);
         }
         free(seeds.data);
+        return 0;
 
-    } else{
+    } else {
         printf("Invalid command. Check the list of all possible commands and try again.\n");
     }
     return 0;

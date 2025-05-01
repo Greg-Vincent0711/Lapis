@@ -26,6 +26,9 @@ cleanhard:
 try:
 	./seedInfoFns spawn_near 1 Plains Village 1000
 
+redo:
+	make cleanhard; make; make try
+
 .PHONY: help
 
 help:

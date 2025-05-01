@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
+#include <time.h>
 #include "../../external/cubiomes/biomes.h"
 #include "../../external/cubiomes/finders.h"
 #include "seedUtility.h"
@@ -151,4 +153,29 @@ enum BiomeID get_biome_id(const char *biome) {
         }
     }
     return -1;
+}
+
+uint64_t get_random_seed_start(uint64_t range_limit) {
+    srand(time(NULL));
+    long mask = 0x7FFFFFFFFFFFFFFF;
+    // ensure we take only the lowest 16 bits with 
+    int clamp = 0xFFFF;
+    /**
+     * create a 64-bit random integer
+     * rand() returns 15 bits at a time
+     * << 48 moves 16 bits into highest section of 64 bit seed
+     * << 32 moves 16 bits into next highest section
+    */
+    uint64_t high = ((uint64_t)rand() & clamp) << 48;
+    uint64_t mid = ((uint64_t)rand() & clamp) << 32;
+    // low is a full 32 bit integer
+    uint64_t low = ((uint64_t)rand() << 16) | (rand() & clamp);
+    // put all the different integers together, mask them within MC seed range
+    uint64_t random_seed = (high | mid | low) & mask;
+
+    if (random_seed > UINT64_MAX - range_limit) {
+        random_seed = UINT64_MAX - range_limit;
+    }
+
+    return random_seed;
 }
