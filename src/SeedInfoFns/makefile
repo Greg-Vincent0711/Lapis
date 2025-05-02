@@ -24,7 +24,7 @@ cleanhard:
 	rm -f *.o *.a seedInfoFns
 
 try:
-	./seedInfoFns spawn_near 1 Plains Village 1000
+	./seedInfoFns spawn_near 10 desert village 1000
 
 redo:
 	make cleanhard; make; make try

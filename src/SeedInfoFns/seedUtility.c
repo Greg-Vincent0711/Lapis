@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <time.h>
+#include <limits.h>
 #include "../../external/cubiomes/biomes.h"
 #include "../../external/cubiomes/finders.h"
 #include "seedUtility.h"
@@ -41,7 +42,7 @@ enum StructureType get_structure_id(const char *structure) {
             return structure_map[entry].id;
         }
     }
-    return -1;
+    return -INT_MAX;
 }
 
 BiomeLookup biome_map[] = {
@@ -143,7 +144,7 @@ BiomeLookup biome_map[] = {
     BIOME_ENTRY(mangrove_swamp),
     BIOME_ENTRY(cherry_grove),
     BIOME_ENTRY(pale_garden),
-};
+}; 
 int NUM_BIOMES = sizeof(biome_map) / sizeof(biome_map[0]);
 
 enum BiomeID get_biome_id(const char *biome) {
@@ -152,10 +153,10 @@ enum BiomeID get_biome_id(const char *biome) {
             return biome_map[entry].id;
         }
     }
-    return -1;
+    return -INT_MAX;
 }
 
-uint64_t get_random_seed_start(uint64_t range_limit) {
+uint64_t generate_random_seed(uint64_t range_limit) {
     srand(time(NULL));
     long mask = 0x7FFFFFFFFFFFFFFF;
     // ensure we take only the lowest 16 bits with 

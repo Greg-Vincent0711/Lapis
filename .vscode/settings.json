@@ -6,6 +6,8 @@
         "biomes.h": "c",
         "seedutility.h": "c",
         "string.h": "c",
-        "limits.h": "c"
+        "limits.h": "c",
+        "array": "c",
+        "vector": "c"
     }
 }
