@@ -1,3 +1,13 @@
+/**
+ * TODO
+ * - Refactor C code
+ *      move structure/biome finders into their own file
+ * - 
+ * - Start Lapis code portion to interact with backend
+ * - Document code
+ * - Write tests for cubiomes code and lapis
+ * - Switch architecture to hosting 
+*/
 #include <stdio.h>
 #include <string.h>
 #include "../../external/cubiomes/finders.h"
@@ -9,30 +19,26 @@ Generator biomeGenerator;
 uint64_t TEST_SEED = 6815923762915875509;
 
 /**
- * TODO - Dimension should be editable based on what the user wants to search for
- * Same with MC version. 
- * Should be editable on frontend
+ * TODO
+ *  Dimension, Seed, MC_Version should be user set fields
+ *  Bot should change those fields for the user
 */
 void setUpBiomeGenerator(){
     setupGenerator(&biomeGenerator, MC_NEWEST, 0);
     applySeed(&biomeGenerator, DIM_OVERWORLD, TEST_SEED);
 }
 
-/**
- * Corresponds to !nearest <biome> coords range for Lapis
- * for now, the seed is going to have to be hardcoded
- * returns 2d coords for biome (x and z)
- * Relatively accurate for Bedrock and Java, since they share the same world gen
-*/
+
 Pos nearestBiome(char *biome, int xCoord, int yCoord, int zCoord, int range, enum BiomeID bID){ 
     setUpBiomeGenerator();
     if (bID < 0) {
         fprintf(stderr, "Error: Unknown biome name '%s'\n", biome);
         return (Pos){-INT_MAX, -INT_MAX};
     }
+    // rand value is arbitrary
     uint64_t rand = 1;
     uint64_t validBiome = (1ULL << bID);
-    setSeed(&rand, TEST_SEED);
+    setSeed(&rand, biomeGenerator.seed);
     return locateBiome(&biomeGenerator, 
                         xCoord, yCoord, zCoord, range, validBiome, 0, &rand, NULL); 
 }
@@ -86,7 +92,7 @@ Pos findNearestStructure(enum StructureType sType, int blockX, int blockZ, int m
                         continue;
                     }
 
-                    // compare the distance for each X,Z coordinate with the current min
+                    // compare the current distance for each X,Z coordinate with the current min
                     long distanceX = structurePos.x - blockX;
                     long distanceZ = structurePos.z - blockZ;
                     long distanceSq = distanceX * distanceX + distanceZ * distanceZ;
@@ -103,13 +109,15 @@ Pos findNearestStructure(enum StructureType sType, int blockX, int blockZ, int m
             }
         }
 
-    // check if a closer structure exists in any future regions
         if (minDistSq != LONG_MAX) {
-            // check within the next max possible radius
-            long maxPossibleDist = ((long)currentRadius + 1) * 512L;
-            // for distance, use squared over sqrt for performance
-            maxPossibleDist *= maxPossibleDist;
-            if (minDistSq <= maxPossibleDist) {
+            // 512L refers to the total radius covered by each consecutive ring(hence the +1) in the search 
+            long nextMaxPossibleDist = ((long)currentRadius + 1) * 512L;
+            nextMaxPossibleDist *= nextMaxPossibleDist;
+            /**
+             * Essentially, if the squared distance to the current found structure is less
+             * than the next radius, break. Don't keep looking for new structures.
+            */
+            if (minDistSq <= nextMaxPossibleDist) {
                 break;
             }
         }
@@ -137,15 +145,18 @@ Pos nearestStructure(enum StructureType sType, int blockX, int blockZ, int maxRa
 
 /**
  * Returns a seed or multiple with the specified spawn conditions
- *  0<= radiusFromSpawn <= 3000 blocks
+ * Read parameters as: x seeds where I spawn in this biome, with a structure x blocks from spawn
 */
 SeedArray spawnNear(int numSeeds, char* biome, char* structure, int radiusFromSpawn) {
-    if (numSeeds <= 0) {
-        fprintf(stderr, "Invalid number of seeds requested\n");
+    // max params are subject to change
+    const int MAX_RADIUS = 3000;
+    const int MAX_SEEDS = 10;
+    if (numSeeds <= 0 || numSeeds > MAX_SEEDS) {
+        fprintf(stderr, "Invalid number of seeds requested. Must be greater than 0 and no greater than %d.\n", MAX_SEEDS);
         return (SeedArray){ .seeds = NULL, .length = 0 };
     }
 
-    int bID = get_biome_id(biome);
+    int bID = biome != 'None' ? get_biome_id(biome) : -INT_MAX;
     int sID = structure != 'None' ? get_structure_id(structure) : -INT_MAX;
     
     if (bID == -INT_MAX && sID == -INT_MAX) {
@@ -153,8 +164,8 @@ SeedArray spawnNear(int numSeeds, char* biome, char* structure, int radiusFromSp
         return (SeedArray){ .seeds = NULL, .length = 0 };
     }
 
-    if (radiusFromSpawn <= 0 || radiusFromSpawn > 3000) {
-        fprintf(stderr, "Invalid radius. Must be greater than 0 and no greater than 3000.\n");
+    if (radiusFromSpawn <= 0 || radiusFromSpawn > MAX_RADIUS) {
+        fprintf(stderr, "Invalid radius. Must be greater than 0 and no greater than %d.\n", MAX_RADIUS);
         return (SeedArray){ .seeds = NULL, .length = 0 };
     }
 
@@ -166,13 +177,18 @@ SeedArray spawnNear(int numSeeds, char* biome, char* structure, int radiusFromSp
     }
 
     int amountFound = 0;
-    int limit = 1000000;
-    uint64_t seedStart = generate_random_seed(limit);
-    for (uint64_t seed = seedStart; seed < seedStart + limit; seed++) {
-        applySeed(&biomeGenerator, DIM_OVERWORLD, seed);
-        // not entirely accurate, but good enough
+    /**
+     * In future versions, add ability to change how many seeds can be searched
+     * For free version, 1,000,000 is fine
+     * TODO - add support for end and nether in future versions
+     * getSpawn fn is not 100% accurate
+    */
+    int seedSearchLimit = 1000000;
+    uint64_t seedStart = generate_random_seed(seedSearchLimit);
+    for (uint64_t seed = seedStart; seed < seedStart + seedSearchLimit; seed++) {
+        applySeed(&biomeGenerator, biomeGenerator.dim, seed);
         Pos spawn = getSpawn(&biomeGenerator);
-
+        // MC coords(X,Z) are ± 30 Million, INT_MAX is an arbitrary error value that isn't valid for MC(i.e, (-1, -1)) 
         int biomeMatch = (bID != -INT_MAX && bID == getBiomeAt(&biomeGenerator, 1, spawn.x, 0, spawn.z));
         int structureMatch = 0;
 
@@ -180,13 +196,16 @@ SeedArray spawnNear(int numSeeds, char* biome, char* structure, int radiusFromSp
             Pos structure = findNearestStructure(sID, spawn.x, spawn.z, radiusFromSpawn);
             structureMatch = (structure.x != -INT_MAX && structure.z != -INT_MAX);
         }
+        /**
+         * All possible conditions where we increase the number of seeds we found
+         * biome and structure, biome only, structure only
+        */
 
         if ((bID != -INT_MAX && sID != -INT_MAX && biomeMatch && structureMatch) ||
             (bID != -INT_MAX && sID == -INT_MAX && biomeMatch) ||
             (bID == -INT_MAX && sID != -INT_MAX && structureMatch)) {
 
             foundSeeds[amountFound++] = (SeedEntry) {seed, spawn};
-
             if (amountFound == numSeeds) {
                 printf(numSeeds == 1 ? "Found %d seed.\n" : "Found %d seeds.\n" , amountFound);
                 break;
@@ -207,6 +226,7 @@ SeedArray spawnNear(int numSeeds, char* biome, char* structure, int radiusFromSp
 /**
  * !nearest - Biome & Structure
  * !spawn_near
+ * TODO - Setup consistent error handling
 */
 int main(int argc, char *argv[]){
     char *command = argv[1];
@@ -238,7 +258,7 @@ int main(int argc, char *argv[]){
             Pos structureCoords = nearestStructure(sType, xCoord, zCoord, range);
             printf("Nearest %s: %d, %d", argument, structureCoords.x, structureCoords.z);
         } else {
-            printf("Invalid argument. Make sure you used the correct Biome or Structure name. Check spelling.\n");
+            fprintf(stderr, "Invalid argument. Make sure you used the correct Biome or Structure name. Check spelling.\n");
             return -1;
         }
     } else if(strcmp(command, "spawn_near") == 0){
