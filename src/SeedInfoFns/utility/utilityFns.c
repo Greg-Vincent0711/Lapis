@@ -5,7 +5,9 @@
 #include <limits.h>
 #include "../../external/cubiomes/biomes.h"
 #include "../../external/cubiomes/finders.h"
-#include "seedUtility.h"
+#include "utilityFns.h"
+
+// will add support for Nether and End in the future
 
 StructureLookup structure_map[] = {
     STRUCTURE_ENTRY(Desert_Pyramid),
@@ -159,7 +161,7 @@ enum BiomeID get_biome_id(const char *biome) {
 uint64_t generate_random_seed(uint64_t range_limit) {
     srand(time(NULL));
     long mask = 0x7FFFFFFFFFFFFFFF;
-    // ensure we take only the lowest 16 bits with 
+    // ensure we take only the lowest 16 bits
     int clamp = 0xFFFF;
     /**
      * create a 64-bit random integer

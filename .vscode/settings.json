@@ -8,6 +8,8 @@
         "string.h": "c",
         "limits.h": "c",
         "array": "c",
-        "vector": "c"
+        "vector": "c",
+        "utilityfns.h": "c",
+        "neareststructure.h": "c"
     }
 }

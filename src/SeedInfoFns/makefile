@@ -1,35 +1,64 @@
-# c compilier option
+# Compiler
 CC = gcc
 
-# compilier flags - add cubiomes as a header, integer overflow wrap around
-CFLAGS = -I../external/cubiomes -fwrapv
-# linker flags - cubiomes compiled lib, math library
-LDFLAGS = ../../external/cubiomes/libcubiomes.a -lm
+# Cubiomes shared lib location (relative from project root)
+CUBIOMES_DIR = external/cubiomes
+CUBIOMES_SO = $(CUBIOMES_DIR)/libcubiomes.so
 
-SRCS = seedInfoFns.c seedUtility.c
+# Compiler flags
+CFLAGS = -fwrapv -fPIC -I$(CUBIOMES_DIR) -Isrc/SeedInfoFns \
+         -Isrc/SeedInfoFns/nearestBiome \
+         -Isrc/SeedInfoFns/nearestStructure \
+         -Isrc/SeedInfoFns/spawnNear \
+         -Isrc/SeedInfoFns/utility
 
-# create object files
+# Linker flags
+LDFLAGS = -L$(CUBIOMES_DIR) -lcubiomes -lm
+
+# Executable name
+TARGET = inputHandler
+
+# Source files (relative to root)
+SRCS = src/SeedInfoFns/inputHandler.c \
+       src/SeedInfoFns/nearestBiome/nearestBiome.c \
+       src/SeedInfoFns/nearestStructure/nearestStructure.c \
+       src/SeedInfoFns/spawnNear/spawnNear.c \
+       src/SeedInfoFns/utility/utilityFns.c
+
+# Object files
 OBJS = $(SRCS:.c=.o)
 
-# build into seedInfoFns
-all: seedInfoFns
-seedInfoFns: $(OBJS)
+# Default target
+all: $(CUBIOMES_SO) $(TARGET)
+
+# Link executable
+$(TARGET): $(OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-# commands
-clean:
-	rm -f *.o *.a
+# Compile .c to .o
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-cleanhard:
-	rm -f *.o *.a seedInfoFns
+# Build shared Cubiomes lib if needed
+$(CUBIOMES_SO):
+	$(CC) -fPIC -shared -o $@ \
+		$(CUBIOMES_DIR)/biome.c \
+		$(CUBIOMES_DIR)/generator.c \
+		$(CUBIOMES_DIR)/layers.c \
+		$(CUBIOMES_DIR)/rng.c
 
+# Run test
 try:
-	./seedInfoFns nearest strucs 43 43 1200
+	LD_LIBRARY_PATH=$(CUBIOMES_DIR) ./$(TARGET) nearest Village 43 43 1200
 
-redo:
-	make cleanhard; make; make try
+# Clean build files
+clean:
+	rm -f $(OBJS)
 
-.PHONY: help
+cleanAll: clean
+	rm -f $(TARGET) $(CUBIOMES_SO)
+
+.PHONY: all clean cleanAll try help
 
 help:
 	@echo "Available make commands:"
