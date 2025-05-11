@@ -2,10 +2,6 @@
 #include <stdio.h>
 #include "limits.h"
 
-/**
- * corresponds to !nearest <structure_id> coords range for Lapis
- * Bedrock is not 100% accurate when using this function, diff structure gen than Java
-*/
 Pos findNearestStructure(enum StructureType sType, int blockX, int blockZ, int maxRadius, Generator bg) {
     Pos nearest = {0};
     // initialize first
@@ -24,7 +20,7 @@ Pos findNearestStructure(enum StructureType sType, int blockX, int blockZ, int m
     /**
      * if the maxRadius is 10 or less, treat it like a region radius (maxRadius << 9)
      * Past 10, it doesn't seem too practical, since most structures a player wants to find
-     * are probably within a 5120 block radius. 
+     * are probably within a 5120(1 region) block radius. 
     */
     if (maxRadius >= 11) {
         maxBlockDistSq = (long)maxRadius * (long)maxRadius;
@@ -36,6 +32,10 @@ Pos findNearestStructure(enum StructureType sType, int blockX, int blockZ, int m
     for (int currentRadius = 0; currentRadius <= maxRegionRadius; currentRadius++) {
         for (int dx = -currentRadius; dx <= currentRadius; dx++) {
             for (int dz = -currentRadius; dz <= currentRadius; dz++) {
+                /**
+                 * Only check the perimeter of each ring
+                 * If statement simplifies to: if (abs(dx) == r || abs(dz) == r)
+                */
                 if (abs(dx) != currentRadius && abs(dz) != currentRadius){
                     continue;
                 }
@@ -48,6 +48,7 @@ Pos findNearestStructure(enum StructureType sType, int blockX, int blockZ, int m
                 if (getStructurePos(sType, bg.mc, bg.seed, regionX, regionZ, &structurePos)) {
                     // after a block position is found, check if it's viable
                     if (!isViableStructurePos(sType, &bg, structurePos.x, structurePos.z, 0)) {
+                        // if not, go to the next iteration
                         continue;
                     }
 

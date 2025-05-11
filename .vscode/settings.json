@@ -10,6 +10,7 @@
         "array": "c",
         "vector": "c",
         "utilityfns.h": "c",
-        "neareststructure.h": "c"
+        "neareststructure.h": "c",
+        "stdio.h": "c"
     }
 }

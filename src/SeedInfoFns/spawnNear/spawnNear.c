@@ -1,3 +1,10 @@
+/**
+     * In future versions, add ability to change how many seeds can be searched
+     * For free version, 1,000,000 is fine
+     * TODO - add support for end and nether in future versions
+     
+**/
+
 #include "stdio.h"
 #include "string.h"
 #include "../../../external/cubiomes/finders.h"
@@ -18,11 +25,11 @@ SeedArray spawnNear(int numSeeds, char* biome, char* structure, int radiusFromSp
         return (SeedArray){ .seeds = NULL, .length = 0 };
     }
 
-    int bID = strcmp(biome, "None") ? get_biome_id(biome) : -INT_MAX;
-    int sID = strcmp(structure, "None") ? get_structure_id(structure) : -INT_MAX;
+    int bID = strcmp(biome, "None") ? get_biome_id(biome) : -1;
+    int sID = strcmp(structure, "None") ? get_structure_id(structure) : -1;
     
-    if (bID == -INT_MAX && sID == -INT_MAX) {
-        fprintf(stderr, "Check your spelling. You must provide either a biome or structure as a search parameter.\n");
+    if (bID == -1 && sID == -1) {
+        fprintf(stderr, "Check your spelling. You must provide either an allowed biome or structure as a search parameter.\n");
         return (SeedArray){ .seeds = NULL, .length = 0 };
     }
 
@@ -38,22 +45,17 @@ SeedArray spawnNear(int numSeeds, char* biome, char* structure, int radiusFromSp
     }
 
     int amountFound = 0;
-    /**
-     * In future versions, add ability to change how many seeds can be searched
-     * For free version, 1,000,000 is fine
-     * TODO - add support for end and nether in future versions
-     * getSpawn fn is not 100% accurate
-    */
     int seedSearchLimit = 1000000;
     uint64_t seedStart = generate_random_seed(seedSearchLimit);
     for (uint64_t seed = seedStart; seed < seedStart + seedSearchLimit; seed++) {
         applySeed(&biomeGenerator, biomeGenerator.dim, seed);
+        // getSpawn fn is not 100% accurate
         Pos spawn = getSpawn(&biomeGenerator);
-        // MC coords(X,Z) are ± 30 Million, INT_MAX is an arbitrary error value that isn't valid for MC(i.e, (-1, -1)) 
-        int biomeMatch = (bID != -INT_MAX && bID == getBiomeAt(&biomeGenerator, 1, spawn.x, 0, spawn.z));
+        int biomeMatch = (bID != -1 && bID == getBiomeAt(&biomeGenerator, 1, spawn.x, 0, spawn.z));
         int structureMatch = 0;
 
-        if (sID != -INT_MAX) {
+        if (sID != -1) {
+            // MC coords(X,Z) are ± 30 Million, INT_MAX is an arbitrary error value that isn't valid for MC(i.e, (-1, -1)) 
             Pos structure = findNearestStructure(sID, spawn.x, spawn.z, radiusFromSpawn, biomeGenerator);
             structureMatch = (structure.x != -INT_MAX && structure.z != -INT_MAX);
         }
@@ -62,9 +64,9 @@ SeedArray spawnNear(int numSeeds, char* biome, char* structure, int radiusFromSp
          * biome and structure, biome only, structure only
         */
 
-        if ((bID != -INT_MAX && sID != -INT_MAX && biomeMatch && structureMatch) ||
-            (bID != -INT_MAX && sID == -INT_MAX && biomeMatch) ||
-            (bID == -INT_MAX && sID != -INT_MAX && structureMatch)) {
+        if ((bID != -1 && sID != -1 && biomeMatch && structureMatch) ||
+            (bID != -1 && sID == -1 && biomeMatch) ||
+            (bID == -1 && sID != -1 && structureMatch)) {
 
             foundSeeds[amountFound++] = (SeedEntry) {seed, spawn};
             if (amountFound == numSeeds) {

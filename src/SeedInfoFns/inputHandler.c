@@ -1,7 +1,8 @@
 /**
  * TODO
+ * - Dimension, Seed, MC_Version should be user set fields
+ * - So, the backend needs to require those fields. Work on this
  * - Start Lapis code portion to interact with backend
- * - Document code
  * - Write tests for cubiomes code and lapis
  * - Switch architecture to hosting 
 */
@@ -17,14 +18,9 @@
 #include "./spawnNear/spawnNear.h"
 #include "./utilityFns/utilityFns.h"
 
-
+// will be gone soon
 uint64_t TEST_SEED = 6815923762915875509;
 
-/**
- * TODO
- *  Dimension, Seed, MC_Version should be user set fields
- *  Bot should change those fields for the user
-*/
 Generator setUpBiomeGenerator(){
     Generator biomeGenerator;
     setupGenerator(&biomeGenerator, MC_NEWEST, 0);
@@ -33,9 +29,10 @@ Generator setUpBiomeGenerator(){
 }
 
 /**
- * !nearest - Biome & Structure
- * !spawn_near
- * TODO - Setup consistent error handling
+ * 3 command types
+ * nearest structure
+ * nearest village
+ * spawn_near
 */
 int main(int argc, char *argv[]){
     Generator biomeGenerator = setUpBiomeGenerator();
@@ -91,6 +88,6 @@ int main(int argc, char *argv[]){
 
     } else {
         printf("Invalid command. Check the list of all possible commands and try again.\n");
+        return 0;
     }
-    return 0;
 }
