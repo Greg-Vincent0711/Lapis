@@ -15,7 +15,7 @@
 #include "./nearestBiome/nearestBiome.h"
 #include "./nearestStructure/nearestStructure.h"
 #include "./spawnNear/spawnNear.h"
-#include "./utility/utilityFns.h"
+#include "./utilityFns/utilityFns.h"
 
 
 uint64_t TEST_SEED = 6815923762915875509;
@@ -42,13 +42,13 @@ int main(int argc, char *argv[]){
     char *command = argv[1];
     char *argument = argv[2];
     if(strcmp(command, "nearest") == 0){
-        if (argc < 7) {
-            printf("Usage (Biome): ./seedInfoFns nearest <biomeName> <x> <y> <z> <range>\n");
-            return -1;
-        }
         enum BiomeID bID = get_biome_id(argument);
         enum StructureType sType = get_structure_id(argument); 
         if(bID != -1){
+            if (argc < 7) {
+                printf("Usage (Biome): ./inputHandler nearest <biomeName> <x> <y> <z> <range>\n");
+                return -1;
+            }
             int xCoord = atoi(argv[3]);
             int yCoord = atoi(argv[4]);
             int zCoord = atoi(argv[5]);
@@ -58,7 +58,7 @@ int main(int argc, char *argv[]){
             printf("Nearest %s: %d, %d", argument, biomeCoords.x, biomeCoords.z);
         } else if(sType != -1){
             if (argc < 6) {
-                printf("Usage (Structure): ./seedInfoFns nearest <structureName> <x> <z> <range>\n");
+                printf("Usage (Structure): ./inputHandler nearest <structureName> <x> <z> <range>\n");
                 return -1;
             }
             int xCoord = atoi(argv[3]);
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]){
         }
     } else if(strcmp(command, "spawn_near") == 0){
         if (argc < 6) {
-            printf("Usage: ./seedInfoFns spawn_near numseeds biome structure range\n");
+            printf("Usage: ./inputHandler spawn_near numseeds biome structure range\n");
             return -1;
         }
         int numSeeds = atoi(argv[2]);

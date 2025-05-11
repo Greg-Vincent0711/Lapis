@@ -3,8 +3,8 @@
 #include <stdint.h>
 #include <time.h>
 #include <limits.h>
-#include "../../external/cubiomes/biomes.h"
-#include "../../external/cubiomes/finders.h"
+#include "../../../external/cubiomes/biomes.h"
+#include "../../../external/cubiomes/finders.h"
 #include "utilityFns.h"
 
 // will add support for Nether and End in the future
@@ -44,7 +44,7 @@ enum StructureType get_structure_id(const char *structure) {
             return structure_map[entry].id;
         }
     }
-    return -INT_MAX;
+    return -1;
 }
 
 BiomeLookup biome_map[] = {
@@ -155,7 +155,7 @@ enum BiomeID get_biome_id(const char *biome) {
             return biome_map[entry].id;
         }
     }
-    return -INT_MAX;
+    return -1;
 }
 
 uint64_t generate_random_seed(uint64_t range_limit) {

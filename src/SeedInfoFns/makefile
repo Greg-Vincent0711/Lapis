@@ -1,62 +1,42 @@
-# Compiler
 CC = gcc
 
-# Cubiomes shared lib location (relative from project root)
-CUBIOMES_DIR = external/cubiomes
-CUBIOMES_SO = $(CUBIOMES_DIR)/libcubiomes.so
+# Compiler flags - Cubiomes as header, integer overflow wraparound
+CFLAGS = -I../external/cubiomes -fwrapv
 
-# Compiler flags
-CFLAGS = -fwrapv -fPIC -I$(CUBIOMES_DIR) -Isrc/SeedInfoFns \
-         -Isrc/SeedInfoFns/nearestBiome \
-         -Isrc/SeedInfoFns/nearestStructure \
-         -Isrc/SeedInfoFns/spawnNear \
-         -Isrc/SeedInfoFns/utility
+# Linker flags - Cubiomes static lib, math library
+LDFLAGS = ../../external/cubiomes/libcubiomes.a -lm
 
-# Linker flags
-LDFLAGS = -L$(CUBIOMES_DIR) -lcubiomes -lm
+SRCS = \
+    inputHandler.c \
+    nearestBiome/nearestBiome.c \
+    nearestStructure/nearestStructure.c \
+    spawnNear/spawnNear.c \
+    utilityFns/utilityFns.c
 
-# Executable name
+OBJS = $(addprefix build/, $(notdir $(SRCS:.c=.o)))
+
 TARGET = inputHandler
 
-# Source files (relative to root)
-SRCS = src/SeedInfoFns/inputHandler.c \
-       src/SeedInfoFns/nearestBiome/nearestBiome.c \
-       src/SeedInfoFns/nearestStructure/nearestStructure.c \
-       src/SeedInfoFns/spawnNear/spawnNear.c \
-       src/SeedInfoFns/utility/utilityFns.c
+all: $(TARGET)
 
-# Object files
-OBJS = $(SRCS:.c=.o)
-
-# Default target
-all: $(CUBIOMES_SO) $(TARGET)
-
-# Link executable
+# Link the final binary
 $(TARGET): $(OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-# Compile .c to .o
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
 
-# Build shared Cubiomes lib if needed
-$(CUBIOMES_SO):
-	$(CC) -fPIC -shared -o $@ \
-		$(CUBIOMES_DIR)/biome.c \
-		$(CUBIOMES_DIR)/generator.c \
-		$(CUBIOMES_DIR)/layers.c \
-		$(CUBIOMES_DIR)/rng.c
+# for filenames under the .o extension, gracefully swap into the build dir, compile based on the .c files
+build/%.o:
+	@mkdir -p build
+	$(CC) $(CFLAGS) -c $(shell find . -name "$*.c") -o $@
 
-# Run test
-try:
-	LD_LIBRARY_PATH=$(CUBIOMES_DIR) ./$(TARGET) nearest Village 43 43 1200
+try: $(TARGET)
+	./$(TARGET) nearest Village 0 0 3
 
-# Clean build files
 clean:
-	rm -f $(OBJS)
+	rm -rf */*.o */*.a build/*
 
-cleanAll: clean
-	rm -f $(TARGET) $(CUBIOMES_SO)
+cleanExec: clean
+	rm -f $(TARGET)
 
 .PHONY: all clean cleanAll try help
 

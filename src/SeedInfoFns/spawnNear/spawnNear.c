@@ -1,7 +1,8 @@
 #include "stdio.h"
+#include "string.h"
 #include "../../../external/cubiomes/finders.h"
 #include "limits.h"
-#include "../utility/utilityFns.h"
+#include "../utilityFns/utilityFns.h"
 #include "../nearestStructure/nearestStructure.h"
 
 /**
@@ -17,8 +18,8 @@ SeedArray spawnNear(int numSeeds, char* biome, char* structure, int radiusFromSp
         return (SeedArray){ .seeds = NULL, .length = 0 };
     }
 
-    int bID = biome != 'None' ? get_biome_id(biome) : -INT_MAX;
-    int sID = structure != 'None' ? get_structure_id(structure) : -INT_MAX;
+    int bID = strcmp(biome, "None") ? get_biome_id(biome) : -INT_MAX;
+    int sID = strcmp(structure, "None") ? get_structure_id(structure) : -INT_MAX;
     
     if (bID == -INT_MAX && sID == -INT_MAX) {
         fprintf(stderr, "Check your spelling. You must provide either a biome or structure as a search parameter.\n");
