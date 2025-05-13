@@ -1,5 +1,5 @@
 import re
-from encryption import decrypt
+from lapis.encryption.encryption import decrypt
 MAX_X_OR_Z = 30_000_000
 MAX_Y = 320
 MIN_Y = -64

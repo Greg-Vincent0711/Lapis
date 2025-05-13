@@ -1,19 +1,19 @@
 import os
 import discord
 from discord.ext.commands import CommandNotFound, MissingRequiredArgument, BadArgument
-from utils import *
-from docstrings import *
-from exceptions import *
+from lapis.helpers.utils import *
+from lapis.helpers.docstrings import *
+from lapis.helpers.exceptions import *
 from dotenv import load_dotenv
 from botocore.exceptions import ClientError
-from embed import *
+from lapis.helpers.embed import *
 from discord.ext import commands
-from db import *
+from lapis.backend.db import *
 
 '''
 TODO
+Seed Integration with Cubiomes-based code
 Tests
-Seed Integration with Cubiomes - Bedrock Version
 '''
 
 load_dotenv()
@@ -164,6 +164,10 @@ async def deleteImage(ctx, locationName):
         except Exception as e:
             await ctx.send(embed=makeErrorEmbed("Error deleting image.", str(e)))
         
+
+@commands.cooldown(RATE, PER, commands.BucketType.user)
+@bot.command(name="nearest", help="")
+# async def nearest(ctx, )
 
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="helpme", help=helpDocString)

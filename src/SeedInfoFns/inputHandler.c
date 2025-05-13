@@ -1,7 +1,5 @@
 /**
  * TODO
- * - Dimension, Seed, MC_Version should be user set fields
- * - So, the backend needs to require those fields. Work on this
  * - Start Lapis code portion to interact with backend
  * - Write tests for cubiomes code and lapis
  * - Switch architecture to hosting 
