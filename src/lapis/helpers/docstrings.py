@@ -33,6 +33,11 @@ deleteImgDocString = '''
         If you'd like to replace an image instead, use saveImage with the same location name. 
 '''
 
+setSeedDocString = '''
+    Set your seed - passed to C executable to find info about your world.
+    Seeds can be any combination of numbers/strings
+'''
+
 helpDocString = '''
     Everything Lapis can do.
 '''

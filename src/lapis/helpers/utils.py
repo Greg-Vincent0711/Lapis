@@ -1,5 +1,8 @@
 import re
 from lapis.encryption.encryption import decrypt
+import hashlib
+import struct
+
 MAX_X_OR_Z = 30_000_000
 MAX_Y = 320
 MIN_Y = -64
@@ -43,3 +46,17 @@ def extract_decrypted_locations(encryptedData):
 def format_coords(coord_string: str) -> str:
     individualCoords = [coord for coord in re.split(r'[,\s]+', coord_string.strip()) if coord]
     return ",".join(individualCoords)
+
+def validate_seed(seed: str):
+    printableCharacters = r'^[\w\s!"#$%&\'()*+,\-./:;<=>?@[\\\]^_`{|}~]+$'
+    return 0 <= len(seed) <= 64 and re.match(printableCharacters, seed) != None
+
+def to_minecraft_seed(user_input):
+    try:
+        # Try to parse a numeric seed (decimal, hex, etc.)
+        return int(user_input)
+    except ValueError:
+        # If not a number, hash it using SHA-256 like Minecraft does
+        hash_bytes = hashlib.sha256(user_input.encode('utf-8')).digest()
+        # Take the first 8 bytes and convert to signed 64-bit integer
+        return struct.unpack('>q', hash_bytes[:8])[0]

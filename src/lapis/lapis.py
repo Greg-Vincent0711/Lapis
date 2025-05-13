@@ -164,10 +164,13 @@ async def deleteImage(ctx, locationName):
         except Exception as e:
             await ctx.send(embed=makeErrorEmbed("Error deleting image.", str(e)))
         
-
 @commands.cooldown(RATE, PER, commands.BucketType.user)
-@bot.command(name="nearest", help="")
-# async def nearest(ctx, )
+@bot.command(name="ss", help=setSeedDocString)
+async def setSeed(ctx, seed: str):
+    if validate_seed(seed):
+        return set_seed(ctx.author.id, to_minecraft_seed(seed))
+    
+    
 
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="helpme", help=helpDocString)

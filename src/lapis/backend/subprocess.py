@@ -1,10 +1,14 @@
-# Connects to Cubiomes Backend
+'''
+seed should be a stored variable
+
+'''
+# Connects to Cubiomes scripts
 import subprocess
 import json
 
-def run_seedinfo_command(args: list[str]) -> dict:
+def getSeedInfo(args: list[str]) -> dict:
     result = subprocess.run(
-        ["./SeedInfoFns"] + args,
+        ["./inputHandler"] + args,
         capture_output=True,
         text=True
     )

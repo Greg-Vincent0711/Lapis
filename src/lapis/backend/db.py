@@ -1,9 +1,9 @@
 # db.py
 import boto3
 from botocore.exceptions import ClientError
-from s3_fns import storeImageInS3, deleteImage
-from encryption import encrypt, decrypt, generate_hash
-from utils import extract_decrypted_locations
+from lapis.backend.s3_fns import storeImageInS3, deleteImage
+from lapis.encryption.encryption import encrypt, decrypt, generate_hash
+from lapis.helpers.utils import extract_decrypted_locations
 import os
 
 dbInstance = boto3.resource('dynamodb')
@@ -44,8 +44,8 @@ def get_location(author_id, location_name):
         else: 
             return None
     
-    except ClientError as e:
-        raise e
+    except ClientError:
+        raise
 
 def delete_location(author_id, location_name):
     try:
@@ -60,8 +60,8 @@ def delete_location(author_id, location_name):
             return "Successfully deleted your location."
         else:
             return None
-    except ClientError as e:
-        raise e
+    except ClientError:
+        raise
 
 def update_location(author_id, location_name, new_coords):
     try:
@@ -81,8 +81,45 @@ def update_location(author_id, location_name, new_coords):
             return decrypt(res['Attributes']['Coordinates']).decode()
         else:
             return None
-    except ClientError as e:
-        raise e
+    except ClientError:
+        raise
+
+
+def set_seed(author_id, seed):
+    try:
+        res =  TABLE.update_item(
+            Key={
+                "Author_ID": str(author_id),
+            },
+            UpdateExpression="set World_Seed = :seed",
+            ExpressionAttributeValues={
+                ":seed": encrypt(seed).decode()
+            },
+            ReturnValues="UPDATED_NEW",
+        )
+        if "Attributes" in res and "World_Seed" in res['Attributes']:
+            return "Successfully set world seed.", True
+        else:
+            return "Failure setting world seed, try again later.", False
+    except ClientError:
+        raise
+        
+def get_seed(author_id):
+    try:
+        res = TABLE.get_item(
+            Key={
+                "Author_ID": str(author_id),
+            }
+        )
+        # need some kind of caching here
+        if 'Item' in res and 'World_Seed' in res['Item']:
+            encryptedSeed = res['Item']['World_Seed']
+            return decrypt(encryptedSeed.encode()).decode()
+        else: 
+            return None
+    except ClientError:
+        raise
+    
 
 '''
 TODO - Scale this fn in the future, pagination, grabbing so many elements at a time, etc
@@ -99,8 +136,8 @@ def list_locations(author_id):
                           else f"{p['Location_Name']} — {p['Coordinates']}"
                         for p in unencrypted_locations
                     ])
-    except ClientError as e:
-        raise e
+    except ClientError:
+        raise
 
 
 async def save_image_url(author_id,location_name,message):
@@ -121,8 +158,8 @@ async def save_image_url(author_id,location_name,message):
             return "Saved an image URL for your location."
         else:
             return None
-    except Exception as e:
-        raise e
+    except Exception:
+        raise
         
 
 async def delete_image_url(author_id, location_name):
@@ -138,6 +175,6 @@ async def delete_image_url(author_id, location_name):
         if "Attributes" in res:
             deleteURL = decrypt(res['Attributes']['Image_URL']).decode()
             await deleteImage(deleteURL)
-    except Exception as e:
-        raise e
+    except Exception:
+        raise
             
