@@ -30,7 +30,7 @@ build/%.o:
 	$(CC) $(CFLAGS) -c $(shell find . -name "$*.c") -o $@
 
 try: $(TARGET)
-	./$(TARGET) nearest Village 0 0 3
+	./$(TARGET) 6815923762915875509 nearest ocean 0 0 3 200
 
 clean:
 	rm -rf */*.o */*.a build/*

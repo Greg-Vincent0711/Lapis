@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include "limits.h"
 #include "../../../external/cubiomes/finders.h"
+/**
+ * If the search radius is too small, function may return the initial coordinates
+*/
 Pos nearestBiome(char *biome, int xCoord, int yCoord, int zCoord, int range, enum BiomeID bID, Generator bg){ 
     if (bID < 0) {
         fprintf(stderr, "Error: Unknown biome name '%s'\n", biome);

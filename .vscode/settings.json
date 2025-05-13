@@ -11,6 +11,8 @@
         "vector": "c",
         "utilityfns.h": "c",
         "neareststructure.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "spawnnear.h": "c",
+        "nearestbiome.h": "c"
     }
 }
