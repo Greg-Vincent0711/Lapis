@@ -34,6 +34,7 @@ PER: float = 5
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
 
+
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="save", help=saveDocString)
 async def saveLocation(ctx, locationName: str, locationCoords: str): 
@@ -133,6 +134,8 @@ async def list_locations_for_player(ctx):
             await ctx.send(embed=makeErrorEmbed("You have no locations to list."))
     except ClientError as e:
         await ctx.send(embed=makeErrorEmbed("Try this command again later.", {e}))
+        
+
 
 @commands.cooldown(RATE, PER * 2, commands.BucketType.user)
 @bot.command(name="saveImg", help=saveImgDocString)
@@ -167,7 +170,8 @@ async def deleteImage(ctx, locationName):
             await ctx.send(embed=makeEmbed("Successful image deletion.", ctx.author.display_name, f"For location {locationName}", requestedBy=True))
         except Exception as e:
             await ctx.send(embed=makeErrorEmbed("Error deleting image.", str(e)))
-        
+            
+          
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="ss", help=setSeedDocString)
 async def setSeed(ctx, seed: str):
@@ -179,6 +183,7 @@ async def setSeed(ctx, seed: str):
         else:
             await ctx.send(embed=makeEmbed(res[0]))
             
+
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="gs", help=getSeedDocString)
 async def getSeed(ctx):
@@ -187,6 +192,8 @@ async def getSeed(ctx):
         await ctx.send(embed=makeEmbed("Retrieved Seed", None, f"{res}"))
     else:
         await ctx.send(makeErrorEmbed("Error", "Could not find a seed for your username."))
+
+
 
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="helpme", help=helpDocString)
@@ -225,3 +232,5 @@ async def on_command_error(ctx, error):
         
 bot.run(TOKEN)
     
+
+#python3 -m src.lapis.lapis
