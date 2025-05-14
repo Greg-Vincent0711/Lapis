@@ -5,8 +5,6 @@ import os
 import json
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
-import botocore 
-import botocore.session 
 from aws_secretsmanager_caching import SecretCache, SecretCacheConfig
 
 load_dotenv()

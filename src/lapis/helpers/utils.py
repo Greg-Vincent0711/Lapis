@@ -1,5 +1,5 @@
 import re
-from lapis.encryption.encryption import decrypt
+from src.lapis.encryption.encryption import decrypt
 import hashlib
 import struct
 

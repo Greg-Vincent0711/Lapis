@@ -5,7 +5,7 @@ import os
 import re
 from io import BytesIO
 import mimetypes
-from lapis.helpers.exceptions import *
+from src.lapis.helpers.exceptions import *
 
 BUCKET = os.getenv('BUCKET_NAME')
 s3Instance = boto3.client('s3')

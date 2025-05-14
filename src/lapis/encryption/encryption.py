@@ -1,7 +1,6 @@
 import hashlib
-import base64
 # check SM for a key, etc
-from lapis.encryption.key_generation import generate_fernet
+from src.lapis.encryption.key_generation import generate_fernet
 from cryptography.fernet import Fernet
 
 fernetInstance = Fernet(generate_fernet())

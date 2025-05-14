@@ -1,9 +1,9 @@
 # db.py
 import boto3
 from botocore.exceptions import ClientError
-from lapis.backend.s3_fns import storeImageInS3, deleteImage
-from lapis.encryption.encryption import encrypt, decrypt, generate_hash
-from lapis.helpers.utils import extract_decrypted_locations
+from src.lapis.backend.s3_fns import storeImageInS3, deleteImage
+from src.lapis.encryption.encryption import encrypt, decrypt, generate_hash
+from src.lapis.helpers.utils import extract_decrypted_locations
 import os
 
 dbInstance = boto3.resource('dynamodb')

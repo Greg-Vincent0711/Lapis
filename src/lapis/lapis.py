@@ -1,18 +1,21 @@
 import os
 import discord
 from discord.ext.commands import CommandNotFound, MissingRequiredArgument, BadArgument
-from lapis.helpers.utils import *
-from lapis.helpers.docstrings import *
-from lapis.helpers.exceptions import *
+
+from src.lapis.helpers.utils import *
+from src.lapis.helpers.docstrings import *
+from src.lapis.helpers.exceptions import *
+from src.lapis.helpers.embed import *
+from src.lapis.backend.db import *
+
 from dotenv import load_dotenv
 from botocore.exceptions import ClientError
-from lapis.helpers.embed import *
 from discord.ext import commands
-from lapis.backend.db import *
+
 
 '''
 TODO
-Seed Integration with Cubiomes-based code
+Seed Integration with SeedInfoFns
 Tests
 '''
 
