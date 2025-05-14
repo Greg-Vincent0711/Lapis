@@ -51,12 +51,12 @@ def validate_seed(seed: str):
     printableCharacters = r'^[\w\s!"#$%&\'()*+,\-./:;<=>?@[\\\]^_`{|}~]+$'
     return 0 <= len(seed) <= 64 and re.match(printableCharacters, seed) != None
 
-def to_minecraft_seed(user_input):
-    try:
-        # Try to parse a numeric seed (decimal, hex, etc.)
-        return int(user_input)
-    except ValueError:
+def to_minecraft_seed(user_input: str | float):
+    if isinstance(user_input, float):
+        return str(user_input)
+    # we need to return strings in order to properly encrypt the data
+    else:
         # If not a number, hash it using SHA-256 like Minecraft does
         hash_bytes = hashlib.sha256(user_input.encode('utf-8')).digest()
         # Take the first 8 bytes and convert to signed 64-bit integer
-        return struct.unpack('>q', hash_bytes[:8])[0]
+        return str(struct.unpack('>q', hash_bytes[:8])[0])

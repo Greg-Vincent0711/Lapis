@@ -84,12 +84,14 @@ def update_location(author_id, location_name, new_coords):
     except ClientError:
         raise
 
-
+# seeds will be stored under a special location name
+# avoids table sprawl
 def set_seed(author_id, seed):
     try:
         res =  TABLE.update_item(
             Key={
                 "Author_ID": str(author_id),
+                "Location": generate_hash("SEED")
             },
             UpdateExpression="set World_Seed = :seed",
             ExpressionAttributeValues={
@@ -109,6 +111,7 @@ def get_seed(author_id):
         res = TABLE.get_item(
             Key={
                 "Author_ID": str(author_id),
+                "Location": generate_hash("SEED")
             }
         )
         # need some kind of caching here

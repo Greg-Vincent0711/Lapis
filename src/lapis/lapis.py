@@ -17,6 +17,7 @@ from discord.ext import commands
 TODO
 Seed Integration with SeedInfoFns
 Tests
+Add pagination for the help page
 '''
 
 load_dotenv()
@@ -171,9 +172,21 @@ async def deleteImage(ctx, locationName):
 @bot.command(name="ss", help=setSeedDocString)
 async def setSeed(ctx, seed: str):
     if validate_seed(seed):
-        return set_seed(ctx.author.id, to_minecraft_seed(seed))
-    
-    
+        res = set_seed(ctx.author.id, to_minecraft_seed(seed))
+        # res 0 contains a success/error message
+        if res[1] == True:
+            await ctx.send(embed=makeEmbed(res[0]))
+        else:
+            await ctx.send(embed=makeEmbed(res[0]))
+            
+@commands.cooldown(RATE, PER, commands.BucketType.user)
+@bot.command(name="gs", help=getSeedDocString)
+async def getSeed(ctx):
+    res = get_seed(ctx.author.id)
+    if res != None:
+        await ctx.send(embed=makeEmbed("Retrieved Seed", None, f"{res}"))
+    else:
+        await ctx.send(makeErrorEmbed("Error", "Could not find a seed for your username."))
 
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="helpme", help=helpDocString)
