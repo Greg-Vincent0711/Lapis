@@ -1,18 +1,18 @@
 '''
-seed should be a stored variable
-
+pull seed from SQLite(cache)
 '''
-# Connects to Cubiomes scripts
+
 import subprocess
 import json
+import os
 
-def getSeedInfo(args: list[str]) -> dict:
+def connectToInputHandler(args: list[str]) -> dict:
     result = subprocess.run(
-        ["./inputHandler"] + args,
+        [os.getenv("EXECUTABLE_NAME")] + args,
         capture_output=True,
         text=True
     )
-
+    
     if result.returncode != 0:
         raise RuntimeError(f"SeedInfoFns failed: {result.stderr.strip()}")
     try:

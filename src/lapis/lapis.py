@@ -7,10 +7,12 @@ from src.lapis.helpers.docstrings import *
 from src.lapis.helpers.exceptions import *
 from src.lapis.helpers.embed import *
 from src.lapis.backend.db import *
+from src.lapis.backend.cache import *
 
 from dotenv import load_dotenv
 from botocore.exceptions import ClientError
 from discord.ext import commands
+
 
 
 '''
@@ -170,28 +172,37 @@ async def deleteImage(ctx, locationName):
             await ctx.send(embed=makeEmbed("Successful image deletion.", ctx.author.display_name, f"For location {locationName}", requestedBy=True))
         except Exception as e:
             await ctx.send(embed=makeErrorEmbed("Error deleting image.", str(e)))
-            
-          
+
+
+
+
+
+
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="ss", help=setSeedDocString)
 async def setSeed(ctx, seed: str):
     if validate_seed(seed):
-        res = set_seed(ctx.author.id, to_minecraft_seed(seed))
+        setSeedAttempt = set_seed(ctx.author.id, to_minecraft_seed(seed))
+        # update the cache when set_seed is called
+        cache_user_seed(ctx.author.id, seed)
         # res 0 contains a success/error message
-        if res[1] == True:
-            await ctx.send(embed=makeEmbed(res[0]))
+        if setSeedAttempt[1] == True:
+            await ctx.send(embed=makeEmbed(setSeedAttempt[0]))
         else:
-            await ctx.send(embed=makeEmbed(res[0]))
-            
-
+            await ctx.send(embed=makeEmbed(setSeedAttempt[0]))
+        
+'''
+Pull from cache to save on GET requests
+Especially when using SeedInfoFns which will gs a lot
+'''
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="gs", help=getSeedDocString)
 async def getSeed(ctx):
-    res = get_seed(ctx.author.id)
-    if res != None:
-        await ctx.send(embed=makeEmbed("Retrieved Seed", None, f"{res}"))
+    cached_seed = get_cached_seed(ctx.author.id)
+    if cached_seed is not None:
+         await ctx.send(embed=makeEmbed("Retrieved Seed", None, f"{cached_seed}"))
     else:
-        await ctx.send(makeErrorEmbed("Error", "Could not find a seed for your username."))
+        await ctx.send(makeErrorEmbed("Error", "Could not find a seed for your user id."))
 
 
 
