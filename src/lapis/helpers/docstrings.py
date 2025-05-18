@@ -40,6 +40,11 @@ getSeedDocString = '''
     Retrieve the seed for a user. No parameters needed, function is based on
     discord information.
 '''
+
+nearestDocString = '''
+    Find the nearest structure or biome.
+'''
+
 helpDocString = '''
     Everything Lapis can do.
 '''

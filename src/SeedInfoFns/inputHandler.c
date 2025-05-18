@@ -61,7 +61,7 @@ int main(int argc, char *argv[]){
             int searchRange = atoi(argv[7]);
             // accurate between Bedrock and Java since they share the same world gen
             Pos biomeCoords = nearestBiome(argument, xCoord, yCoord, zCoord, searchRange, bID, biomeGenerator);
-            printf("Nearest %s: %d, %d", argument, biomeCoords.x, biomeCoords.z);
+            printf("{\"feature\": \"%s\", \"x\": %d, \"z\": %d}\n", argument, biomeCoords.x, biomeCoords.z);
         } else if(sType != -1){
             if (argc < 7) {
                 printf("Usage (Structure): ./inputHandler seed nearest <structureName> <x> <z> <range>\n");
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]){
             int range = atoi(argv[6]);
             printf("%d %d %d\n", xCoord, zCoord, range);
             Pos structureCoords = findNearestStructure(sType, xCoord, zCoord, range, biomeGenerator);
-            printf("Nearest %s: %d, %d", argument, structureCoords.x, structureCoords.z);
+            printf("{\"feature\": \"%s\", \"x\": %d, \"z\": %d}\n", argument, structureCoords.x, structureCoords.z);
         } else {
             fprintf(stderr, "Invalid argument. Make sure you used the correct Biome or Structure name. Check spelling.\n");
             return -1;
@@ -90,7 +90,7 @@ int main(int argc, char *argv[]){
         for (int i = 0; i < seedData.length; i++){
             int xCoord = seedData.seeds[i].spawnCoordinates.x;
             int zCoord = seedData.seeds[i].spawnCoordinates.z;
-            printf("Found Seed: %llu with spawn: %d %d \n", seedData.seeds[i].seed, xCoord, zCoord);
+            printf("{\"seed\": %llu, \"spawn\": {\"x\": %d, \"z\": %d}}\n", seedData.seeds[i].seed, xCoord, zCoord);
         }
         free(seedData.seeds);
         return 0;

@@ -1,11 +1,15 @@
 import re
 from src.lapis.encryption.encryption import decrypt
+from src.lapis.helpers.features import ALL_FEATURES
 import hashlib
 import struct
+import discord
+from discord import app_commands
 
 MAX_X_OR_Z = 30_000_000
 MAX_Y = 320
 MIN_Y = -64
+MAX_SUGGESTIONS = 25
 
 def isCorrectLength(name: str) -> str | bool:
     return True if len(name) <= 30 and len(name) >= 3 else "Invalid name length. Must between 3 and 30 characters."
@@ -60,3 +64,12 @@ def to_minecraft_seed(seedValue: str):
         hash_bytes = hashlib.sha256(seedValue.encode('utf-8')).digest()
         # Take the first 8 bytes and convert to signed 64-bit integer
         return str(struct.unpack('>q', hash_bytes[:8])[0])
+    
+# streamlines the process of using seedInfo commands
+async def feature_autocomplete(interaction: discord.Interaction, word: str):
+    word = word.lower()
+    return [
+        app_commands.Choice(name=feature, value=feature)
+        for feature in ALL_FEATURES
+        if feature.lower().startswith(word)
+    ][:MAX_SUGGESTIONS]

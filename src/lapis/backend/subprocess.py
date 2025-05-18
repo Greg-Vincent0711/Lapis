@@ -1,14 +1,17 @@
-'''
-pull seed from SQLite(cache)
-'''
-
+# Runs SeedInfoFns
 import subprocess
 import json
 import os
+from src.lapis.backend.cache import get_cached_seed
+from src.lapis.helpers.features import *
 
-def connectToInputHandler(args: list[str]) -> dict:
+
+def connectToInputHandler(author_id: str, args: list[str]) -> dict:
+    seed = get_cached_seed(author_id)
+    print(seed)
     result = subprocess.run(
-        [os.getenv("EXECUTABLE_NAME")] + args,
+        # spread all args into their individual forms as strings
+        [os.getenv("EXECUTABLE_NAME"), seed, *map (str, args)],
         capture_output=True,
         text=True
     )

@@ -1,5 +1,7 @@
 import os
 import discord
+from discord import app_commands
+from discord.ext import commands
 from discord.ext.commands import CommandNotFound, MissingRequiredArgument, BadArgument
 
 from src.lapis.helpers.utils import *
@@ -8,6 +10,8 @@ from src.lapis.helpers.exceptions import *
 from src.lapis.helpers.embed import *
 from src.lapis.backend.db import *
 from src.lapis.backend.cache import *
+from src.lapis.backend.subprocess import connectToInputHandler
+from src.lapis.helpers.features import *
 
 from dotenv import load_dotenv
 from botocore.exceptions import ClientError
@@ -17,9 +21,10 @@ from discord.ext import commands
 
 '''
 TODO
-Seed Integration with SeedInfoFns
-Tests
+Streamline a way to do cubiomes commands
 Add pagination for the help page
+Finish caching stuff
+Tests
 '''
 
 load_dotenv()
@@ -34,8 +39,12 @@ PER: float = 5
 
 @bot.event
 async def on_ready():
+    await bot.tree.sync()
     print(f'{bot.user.name} has connected to Discord!')
 
+'''
+ Start DB Functions
+'''
 
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="save", help=saveDocString)
@@ -138,6 +147,9 @@ async def list_locations_for_player(ctx):
         await ctx.send(embed=makeErrorEmbed("Try this command again later.", {e}))
         
 
+'''
+Start S3 Functions
+'''
 
 @commands.cooldown(RATE, PER * 2, commands.BucketType.user)
 @bot.command(name="saveImg", help=saveImgDocString)
@@ -174,9 +186,9 @@ async def deleteImage(ctx, locationName):
             await ctx.send(embed=makeErrorEmbed("Error deleting image.", str(e)))
 
 
-
-
-
+'''
+Start seed functions
+'''
 
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="ss", help=setSeedDocString)
@@ -191,10 +203,8 @@ async def setSeed(ctx, seed: str):
         else:
             await ctx.send(embed=makeEmbed(setSeedAttempt[0]))
         
-'''
-Pull from cache to save on GET requests
-Especially when using SeedInfoFns which will gs a lot
-'''
+
+# Utility fn for users to see their set seed, more for completeness
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="gs", help=getSeedDocString)
 async def getSeed(ctx):
@@ -205,7 +215,41 @@ async def getSeed(ctx):
         await ctx.send(makeErrorEmbed("Error", "Could not find a seed for your user id."))
 
 
+'''
+Start Nearest Fn
+'''
+@bot.tree.command(name="nearest", description=nearestDocString)
+@commands.cooldown(RATE, PER, commands.BucketType.user)
+@app_commands.describe(
+    feature="Structure or Biome name",
+    x_coord="X coordinate",
+    z_coord="Z coordinate",
+    radius="Search radius"
+)
+@app_commands.autocomplete(feature=feature_autocomplete)
+async def nearest(interaction: discord.Interaction, feature: str, x_coord: str, z_coord: str, radius: str):
+    await interaction.response.defer() 
+    await interaction.followup.send(
+        f"Searching for nearest **{feature}** near ({x_coord}, {z_coord}) within {radius} blocks."
+    )
+    arguments = [interaction.command.name, feature, x_coord, z_coord, radius]
+    # locateBiomes library fn takes a Y coordinate, doesn't seem to affect outcome of search though
+    if feature in BIOMES:
+        arguments.insert(3, 0)
+    seedInfo = connectToInputHandler(interaction.user.id, arguments)
+    # await interaction.response.send_message(embed=makeEmbed("Found Coordinates", None, f"{}"))
+    formatted_res = f"Found {seedInfo['feature']} at ({seedInfo['x']}, {seedInfo['z']})"
+    await interaction.followup.send(embed=makeEmbed("Found Coordinates", None, formatted_res))
 
+
+'''
+End Nearest Fn
+'''
+
+
+'''
+Start utility fns
+'''
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="helpme", help=helpDocString)
 async def help_command(ctx):
@@ -219,6 +263,8 @@ async def help_command(ctx):
         if not command.hidden:
             help_text += f"**!{command.name}** - {command.help or 'No description provided.'}\n"
 
+    for command in bot.tree.get_commands():
+        help_text += f"**/{command.name}** - {command.description or 'No description provided.'}\n"
     await ctx.send(embed=makeEmbed(title="Lapis' Commands", description=help_text))
 
 @bot.command(name="logout", help="Logs the bot out of Discord. Bot owner only.")
@@ -242,6 +288,5 @@ async def on_command_error(ctx, error):
         await ctx.send(embed=makeErrorEmbed("An error occured", error))
         
 bot.run(TOKEN)
-    
-
 #python3 -m src.lapis.lapis
+
