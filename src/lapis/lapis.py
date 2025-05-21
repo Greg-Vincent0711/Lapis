@@ -21,7 +21,6 @@ from discord.ext import commands
 
 '''
 TODO
-Streamline a way to do cubiomes commands
 Add pagination for the help page
 Finish caching stuff
 Tests

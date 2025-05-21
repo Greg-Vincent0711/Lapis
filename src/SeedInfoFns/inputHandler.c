@@ -40,7 +40,8 @@ int main(int argc, char *argv[]){
     uint64_t seed = (uint64_t) strtoull(argv[1], &end, 10);
 
     if(strcmp(end, "\0") || errno == ERANGE){
-        printf("Seed input is invalid.\n");
+        // printf("Seed input is invalid.\n");
+        printf("{\"Error\": \"Seed input is invalid.\"}\n");
         return -1;
     }
 
@@ -52,7 +53,7 @@ int main(int argc, char *argv[]){
         enum StructureType sType = get_structure_id(argument); 
         if(bID != -1){
             if (argc < 8) {
-                printf("Usage (Biome): ./inputHandler seed nearest <biomeName> <x> <y> <z> <range>\n");
+                printf("{\"Error\": \"Incorrect usage. Amount of arguments is too low.\"}\n");
                 return -1;
             }
             int xCoord = atoi(argv[4]);
@@ -62,19 +63,21 @@ int main(int argc, char *argv[]){
             // accurate between Bedrock and Java since they share the same world gen
             Pos biomeCoords = nearestBiome(argument, xCoord, yCoord, zCoord, searchRange, bID, biomeGenerator);
             printf("{\"feature\": \"%s\", \"x\": %d, \"z\": %d}\n", argument, biomeCoords.x, biomeCoords.z);
+            return 0;
         } else if(sType != -1){
             if (argc < 7) {
-                printf("Usage (Structure): ./inputHandler seed nearest <structureName> <x> <z> <range>\n");
+                printf("{\"Error\": \"Incorrect usage. Amount of arguments is too low for.\"}\n");
                 return -1;
             }
             int xCoord = atoi(argv[4]);
             int zCoord = atoi(argv[5]);
             int range = atoi(argv[6]);
-            printf("%d %d %d\n", xCoord, zCoord, range);
+            // printf("%d %d %d\n", xCoord, zCoord, range);
             Pos structureCoords = findNearestStructure(sType, xCoord, zCoord, range, biomeGenerator);
             printf("{\"feature\": \"%s\", \"x\": %d, \"z\": %d}\n", argument, structureCoords.x, structureCoords.z);
+            return 0;
         } else {
-            fprintf(stderr, "Invalid argument. Make sure you used the correct Biome or Structure name. Check spelling.\n");
+            printf("{\"Error\": \"Incorrect usage.\"}\n");
             return -1;
         }
     } else if(strcmp(command, "spawn_near") == 0){
@@ -96,7 +99,7 @@ int main(int argc, char *argv[]){
         return 0;
 
     } else {
-        printf("Invalid command. Check the list of all possible commands and try again.\n");
+        printf("{\"seed\": none, \"spawn\": {\"x\": 0, \"z\": 0}}\n");
         return 0;
     }
 }
