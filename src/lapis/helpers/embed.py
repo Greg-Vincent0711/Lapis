@@ -1,7 +1,7 @@
 import discord
 from discord import Color
 
-def makeEmbed(title = None, authorName = None, description=None, url=None):
+def makeEmbed(title = None, description = None, authorName=None, url=None):
     embedData = {
         "title": title,
         "description": description,

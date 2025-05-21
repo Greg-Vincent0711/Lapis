@@ -22,7 +22,10 @@ from discord.ext import commands
 '''
 TODO
 Add pagination for the help page
-Finish caching stuff
+Finish caching stuff - invalidation
+Implement spawn_near frontend
+api stuff/hosting
+make it so that the error json from the inputHandler.c code works properly
 Tests
 '''
 
@@ -209,7 +212,7 @@ async def setSeed(ctx, seed: str):
 async def getSeed(ctx):
     cached_seed = get_cached_seed(ctx.author.id)
     if cached_seed is not None:
-         await ctx.send(embed=makeEmbed("Retrieved Seed", None, f"{cached_seed}"))
+         await ctx.send(embed=makeEmbed("Retrieved Seed", f"{cached_seed}", None))
     else:
         await ctx.send(makeErrorEmbed("Error", "Could not find a seed for your user id."))
 
@@ -236,9 +239,8 @@ async def nearest(interaction: discord.Interaction, feature: str, x_coord: str, 
     if feature in BIOMES:
         arguments.insert(3, 0)
     seedInfo = connectToInputHandler(interaction.user.id, arguments)
-    # await interaction.response.send_message(embed=makeEmbed("Found Coordinates", None, f"{}"))
     formatted_res = f"Found {seedInfo['feature']} at ({seedInfo['x']}, {seedInfo['z']})"
-    await interaction.followup.send(embed=makeEmbed("Found Coordinates", None, formatted_res))
+    await interaction.followup.send(embed=makeEmbed("Retrieved Coordinates", formatted_res, interaction.user.name))
 
 
 '''
@@ -287,5 +289,7 @@ async def on_command_error(ctx, error):
         await ctx.send(embed=makeErrorEmbed("An error occured", error))
         
 bot.run(TOKEN)
-#python3 -m src.lapis.lapis
+'''
+python3 -m src.lapis.lapis
+'''
 
