@@ -9,7 +9,7 @@ from discord import app_commands
 MAX_X_OR_Z = 30_000_000
 MAX_Y = 320
 MIN_Y = -64
-MAX_SUGGESTIONS = 25
+MAX_SUGGESTIONS = 10
 
 def isCorrectLength(name: str) -> str | bool:
     return True if len(name) <= 30 and len(name) >= 3 else "Invalid name length. Must between 3 and 30 characters."

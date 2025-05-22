@@ -1,8 +1,10 @@
 import os
 import discord
+from discord import Embed
 from discord import app_commands
 from discord.ext import commands
 from discord.ext.commands import CommandNotFound, MissingRequiredArgument, BadArgument
+from disputils import BotEmbedPaginator
 
 from src.lapis.helpers.utils import *
 from src.lapis.helpers.docstrings import *
@@ -66,7 +68,7 @@ async def saveLocation(ctx, locationName: str, locationCoords: str):
             if ctx.message.attachments:
                 # users can optionally save an image when first saving a location
                 await saveImage(ctx, locationName)
-            await ctx.send(embed=makeEmbed(title=f"{locationName} has been saved.", authorName=ctx.author.display_name, description=formattedCoords, requestedBy=True))
+            await ctx.send(embed=makeEmbed(title=f"{locationName} has been saved.", description=formattedCoords, authorName=ctx.author.display_name))
         except Exception as e:
             await ctx.send(embed=makeErrorEmbed("Error saving your location and coordinates.", {e}))
 
@@ -83,9 +85,9 @@ async def getLocation(ctx, locationName: str):
             retrieved_data = get_location(ctx.author.id, locationName)
             if retrieved_data is not None:
                 if len(retrieved_data) > 1 and retrieved_data[1] is not None:
-                    await ctx.send(embed=makeEmbed(title=f"Coordinates for {locationName}", authorName=ctx.author.display_name, description=f"{retrieved_data[0]}", requestedBy=True, url=retrieved_data[1]))
+                    await ctx.send(embed=makeEmbed(title=f"Coordinates for {locationName}", description=f"{retrieved_data[0]}", authorName=ctx.author.display_name, url=retrieved_data[1]))
                 else:
-                    await ctx.send(embed=makeEmbed(title=f"Coordinates for {locationName}", authorName=ctx.author.display_name, description=f"{retrieved_data[0]}", requestedBy=True))
+                    await ctx.send(embed=makeEmbed(title=f"Coordinates for {locationName}", description=f"{retrieved_data[0]}", authorName=ctx.author.display_name))
             else:
                 await ctx.send(embed=makeErrorEmbed(f"No location with that name found.", f"Call !list to see all locations."))
         except ClientError as e:
@@ -103,7 +105,7 @@ async def deleteLocation(ctx, locationName: str):
         try:
             result = await delete_location(ctx.author.id, locationName)
             if result != None:
-                await ctx.send(embed=makeEmbed(title="Success", authorName=ctx.author.display_name, description=result, requestedBy=True))
+                await ctx.send(embed=makeEmbed(title="Success", description=result, authorName=ctx.author.display_name, ))
             else:
                 await ctx.send(embed=makeErrorEmbed(f"No matching location found for '{locationName}'. Call !list to see all locations you have created."))
         except ClientError as e:
@@ -124,7 +126,7 @@ async def updateLocation(ctx, locationName, newCoords):
         try:
             response = update_location(ctx.author.id, locationName, format_coords(newCoords))
             if response != None:
-                await ctx.send(embed=makeEmbed(title=f"{locationName} updated successfully.", authorName=ctx.author.display_name, description=f"New coordinates: {response}", requestedBy=True))
+                await ctx.send(embed=makeEmbed(title=f"{locationName} updated successfully.", description=f"New coordinates: {response}", authorName=ctx.author.display_name))
             else:
                 await ctx.send(embed=makeErrorEmbed(f"Error updating {locationName}"))
         except ClientError as e:
@@ -142,7 +144,7 @@ async def list_locations_for_player(ctx):
     try:
         player_locations = list_locations(ctx.author.id)
         if len(player_locations) >= 1:
-            await ctx.send(embed=makeEmbed(description=player_locations, authorName=ctx.author.display_name, requestedBy=True))
+            await ctx.send(embed=makeEmbed(description=player_locations, authorName=ctx.author.display_name))
         else:
             await ctx.send(embed=makeErrorEmbed("You have no locations to list."))
     except ClientError as e:
@@ -183,7 +185,7 @@ async def deleteImage(ctx, locationName):
     else:
         try:
             await delete_image_url(ctx.author.id, locationName)
-            await ctx.send(embed=makeEmbed("Successful image deletion.", ctx.author.display_name, f"For location {locationName}", requestedBy=True))
+            await ctx.send(embed=makeEmbed("Successful image deletion.", f"For location {locationName}", ctx.author.display_name))
         except Exception as e:
             await ctx.send(embed=makeErrorEmbed("Error deleting image.", str(e)))
 
@@ -201,9 +203,9 @@ async def setSeed(ctx, seed: str):
         cache_user_seed(ctx.author.id, seed)
         # res 0 contains a success/error message
         if setSeedAttempt[1] == True:
-            await ctx.send(embed=makeEmbed(setSeedAttempt[0]))
+            await ctx.send(embed=makeEmbed(title=setSeedAttempt[0]))
         else:
-            await ctx.send(embed=makeEmbed(setSeedAttempt[0]))
+            await ctx.send(embed=makeEmbed(title=setSeedAttempt[0]))
         
 
 # Utility fn for users to see their set seed, more for completeness
@@ -212,7 +214,7 @@ async def setSeed(ctx, seed: str):
 async def getSeed(ctx):
     cached_seed = get_cached_seed(ctx.author.id)
     if cached_seed is not None:
-         await ctx.send(embed=makeEmbed("Retrieved Seed", f"{cached_seed}", None))
+         await ctx.send(embed=makeEmbed("Retrieved Seed", f"{cached_seed}"))
     else:
         await ctx.send(makeErrorEmbed("Error", "Could not find a seed for your user id."))
 
@@ -263,7 +265,17 @@ async def help_command(ctx):
     for command in bot.commands:
         if not command.hidden:
             help_text += f"**!{command.name}** - {command.help or 'No description provided.'}\n"
-
+    if len(bot.commands) > 10:
+        # split the list in two, bot.commands is originally a set
+        botCommands = list(bot.commands)
+        embeds = [
+            Embed(title="Lapis' Commands", description=botCommands[:len(bot.commands) / 2], color=0x115599),
+            Embed(title="Lapis' Commands", description=botCommands[len(bot.commands) / 2:], color=0x115599),
+        ]
+        # pass two embeds
+        paginator = BotEmbedPaginator(ctx, embeds)
+        # call pagination fn
+        await paginator.run()
     for command in bot.tree.get_commands():
         help_text += f"**/{command.name}** - {command.description or 'No description provided.'}\n"
     await ctx.send(embed=makeEmbed(title="Lapis' Commands", description=help_text))
