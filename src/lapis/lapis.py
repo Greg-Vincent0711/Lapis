@@ -1,15 +1,15 @@
 import os
 import discord
-from discord import Embed
-from discord import app_commands
+from discord import Embed, app_commands
 from discord.ext import commands
 from discord.ext.commands import CommandNotFound, MissingRequiredArgument, BadArgument
-from disputils import BotEmbedPaginator
 
 from src.lapis.helpers.utils import *
 from src.lapis.helpers.docstrings import *
 from src.lapis.helpers.exceptions import *
 from src.lapis.helpers.embed import *
+from src.lapis.helpers.paginator import *
+
 from src.lapis.backend.db import *
 from src.lapis.backend.cache import *
 from src.lapis.backend.subprocess import connectToInputHandler
@@ -17,13 +17,11 @@ from src.lapis.helpers.features import *
 
 from dotenv import load_dotenv
 from botocore.exceptions import ClientError
-from discord.ext import commands
 
 
 
 '''
 TODO
-Add pagination for the help page
 Finish caching stuff - invalidation
 Implement spawn_near frontend
 api stuff/hosting
@@ -244,41 +242,27 @@ async def nearest(interaction: discord.Interaction, feature: str, x_coord: str, 
     formatted_res = f"Found {seedInfo['feature']} at ({seedInfo['x']}, {seedInfo['z']})"
     await interaction.followup.send(embed=makeEmbed("Retrieved Coordinates", formatted_res, interaction.user.name))
 
-
-'''
-End Nearest Fn
-'''
-
-
 '''
 Start utility fns
 '''
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="helpme", help=helpDocString)
 async def help_command(ctx):
-    help_text = (
-        "Commands are always in one of these forms:\n"
-        "`!command location_name 'x y z'`\n"
-        "`!command location_name`\n"
-        "`!command`\n\n"
-    )
-    for command in bot.commands:
-        if not command.hidden:
-            help_text += f"**!{command.name}** - {command.help or 'No description provided.'}\n"
-    if len(bot.commands) > 10:
-        # split the list in two, bot.commands is originally a set
-        botCommands = list(bot.commands)
-        embeds = [
-            Embed(title="Lapis' Commands", description=botCommands[:len(bot.commands) / 2], color=0x115599),
-            Embed(title="Lapis' Commands", description=botCommands[len(bot.commands) / 2:], color=0x115599),
-        ]
-        # pass two embeds
-        paginator = BotEmbedPaginator(ctx, embeds)
-        # call pagination fn
-        await paginator.run()
-    for command in bot.tree.get_commands():
-        help_text += f"**/{command.name}** - {command.description or 'No description provided.'}\n"
-    await ctx.send(embed=makeEmbed(title="Lapis' Commands", description=help_text))
+    COLOR = 0x115599
+    commands_list = [cmd for cmd in ctx.bot.commands if not cmd.hidden]
+    # 5 commands per page
+    pages = [commands_list[i:i+5] for i in range(0, len(commands_list), 5)]
+    embeds = []
+
+    for page in pages:
+        desc = ""
+        for cmd in page:
+            desc += f"**!{cmd.name}** - {cmd.help or 'No description provided.'}\n"
+        embed = Embed(title="Lapis' Commands", description=desc, color=COLOR)
+        embeds.append(embed)
+        
+    await ctx.send(embed=embeds[0], view=HelpPaginator(embeds=embeds))
+
 
 @bot.command(name="logout", help="Logs the bot out of Discord. Bot owner only.")
 @commands.is_owner()
@@ -286,6 +270,7 @@ async def logout(ctx):
     await ctx.send("Logging out...")
     await bot.close()
     
+
 
 @bot.event
 async def on_command_error(ctx, error):
