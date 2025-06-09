@@ -133,7 +133,6 @@ async def updateLocation(ctx, locationName, newCoords):
             error_message = e.response["Error"]["Message"]
             await ctx.send(embed=makeErrorEmbed(f'Error updating {locationName}', error_message))
 
-
 '''
 TODO
 Scale this function in the future
@@ -146,6 +145,10 @@ async def list_locations_for_player(ctx):
         player_locations = list_locations(ctx.author.id)
         if len(player_locations) >= 1:
             await ctx.send(embed=makeEmbed(description=player_locations, authorName=ctx.author.display_name))
+        elif len(player_locations >= 10):
+            PER_PAGE = 3
+            placesPerPage = paginate(player_locations, PER_PAGE)
+            await ctx.send(embed=placesPerPage[0], view=Paginator(placesPerPage))
         else:
             await ctx.send(embed=makeErrorEmbed("You have no locations to list."))
     except ClientError as e:
@@ -270,21 +273,10 @@ async def spawn_near(interaction: discord.Interaction, numseeds: str, biome: str
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="helpme", help=helpDocString)
 async def help_command(ctx):
-    COMMAND_NUM = 3
+    CMDS_PER_PAGE = 3
     commands_list = [cmd for cmd in ctx.bot.commands if not cmd.hidden]
-    print(len(commands_list))
-    # 5 commands per page
-    pages = [commands_list[i:i+COMMAND_NUM] for i in range(0, len(commands_list), COMMAND_NUM)]
-    commands = []
-    for page in pages:
-        desc = ""
-        for cmd in page:
-            desc += f"**!{cmd.name}** - {cmd.help or 'No description provided.'}\n"
-        # 0x115599 is blue
-        embed = Embed(title="Lapis' Commands", description=desc, color=0x115599)
-        commands.append(embed)
-        
-    await ctx.send(embed=commands[0], view=Paginator(commands))
+    pages = paginate(commands_list, CMDS_PER_PAGE)        
+    await ctx.send(embed=pages[0], view=Paginator(pages))
 
 
 @bot.command(name="logout", help="Logs the bot out of Discord. Bot owner only.")

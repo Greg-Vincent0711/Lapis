@@ -1,7 +1,24 @@
-from discord import Interaction, ButtonStyle
+from discord import Embed, Interaction, ButtonStyle
 from discord.ui import View, button
 
-# helper class to paginate the results !helpme fn 
+'''
+    splits item lists into manageable chunks for pagination
+    Returns a list of embeds each containing a section of the list we want to display
+'''
+def paginate(itemList, perPage):
+    pages = [itemList[i:i+perPage] for i in range(0, len(itemList), perPage)]
+    paginated_commands = []
+    for page in pages:
+        pageInfo = ""
+        for cmd in page:
+            pageInfo += f"**!{cmd.name}** - {cmd.help or 'No description provided.'}\n"
+        # 0x115599 is blue
+        embed = Embed(title="Lapis' Commands", description=pageInfo, color=0x115599)
+        paginated_commands.append(embed)
+    return paginated_commands
+    
+
+# helper class to graphically paginate data
 class Paginator(View):
     def __init__(self, embeds):
         super().__init__(timeout=120)
@@ -28,5 +45,4 @@ class Paginator(View):
             self.current_page += 1
             self.checkPageBoundary()
             await interaction.response.edit_message(embed=self.embeds[self.current_page], view=self)
-
 
