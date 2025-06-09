@@ -9,7 +9,6 @@ from src.lapis.helpers.docstrings import *
 from src.lapis.helpers.exceptions import *
 from src.lapis.helpers.embed import *
 from src.lapis.helpers.paginator import *
-
 from src.lapis.backend.db import *
 from src.lapis.backend.cache import *
 from src.lapis.backend.subprocess import connectToInputHandler
@@ -23,7 +22,6 @@ from botocore.exceptions import ClientError
 '''
 TODO
 Finish caching stuff - invalidation
-Implement spawn_near frontend
 api stuff/hosting
 make it so that the error json from the inputHandler.c code works properly
 Tests
@@ -42,7 +40,11 @@ PER: float = 5
 @bot.event
 async def on_ready():
     await bot.tree.sync()
-    print(f'{bot.user.name} has connected to Discord!')
+
+
+@bot.event
+async def on_guild_join(ctx):
+    await ctx.send(embed=makeEmbed("Thanks for inviting me!", "Send '!helpme' to get started."))
 
 '''
  Start DB Functions
@@ -51,8 +53,8 @@ async def on_ready():
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="save", help=saveDocString)
 async def saveLocation(ctx, locationName: str, locationCoords: str): 
-    coordCheck = isCorrectCoordFormat(locationCoords)
     nameCheck = isCorrectLength(locationName)
+    coordCheck = isCorrectCoordFormat(locationCoords)
     # both of these fns return error messages if not True
     if nameCheck is not True:
         await ctx.send(embed=makeErrorEmbed("Error", f"{nameCheck}"))
@@ -135,6 +137,7 @@ async def updateLocation(ctx, locationName, newCoords):
 '''
 TODO
 Scale this function in the future
+This should also use pagination
 '''
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="list", help=listDocString)
@@ -199,11 +202,8 @@ async def setSeed(ctx, seed: str):
         setSeedAttempt = set_seed(ctx.author.id, to_minecraft_seed(seed))
         # update the cache when set_seed is called
         cache_user_seed(ctx.author.id, seed)
-        # res 0 contains a success/error message
-        if setSeedAttempt[1] == True:
-            await ctx.send(embed=makeEmbed(title=setSeedAttempt[0]))
-        else:
-            await ctx.send(embed=makeEmbed(title=setSeedAttempt[0]))
+        # res[1] contains a success/error message
+        await ctx.send(embed=makeEmbed(title=setSeedAttempt[1]))
         
 
 # Utility fn for users to see their set seed, more for completeness
@@ -241,27 +241,50 @@ async def nearest(interaction: discord.Interaction, feature: str, x_coord: str, 
     seedInfo = connectToInputHandler(interaction.user.id, arguments)
     formatted_res = f"Found {seedInfo['feature']} at ({seedInfo['x']}, {seedInfo['z']})"
     await interaction.followup.send(embed=makeEmbed("Retrieved Coordinates", formatted_res, interaction.user.name))
+    
+    
+    
+# spawn_near numseeds biome structure range
+@bot.tree.command(name="spn", description=spawnNearDocString)
+@commands.cooldown(RATE, PER, commands.BucketType.user)
+@app_commands.describe(
+    numseeds="Requested seeds in range 0-10",
+    biome="Biome you'd like to spawn in.",
+    structure="Structure(s) within a certain range of your spawn.",
+    range="Distance from spawn the structure should be."
+)
+@app_commands.autocomplete(biome=feature_autocomplete)
+@app_commands.autocomplete(structure=feature_autocomplete)
+# As long as one of biome/structure is not None, should be fine
+async def spawn_near(interaction: discord.Interaction, numseeds: str, biome: str, structure: str, range: str):
+    await interaction.response.defer()
+    await interaction.followup.send(f"Finding {numseeds} seeds with: a {biome} spawn, and a {structure} within {range} blocks.")
+    arguments = [os.getenv("FN_NAME"), numseeds, biome, structure, range]
+    retrievedSeeds = connectToInputHandler(interaction.user.id, arguments)
+    formattedRes = ""
+    for val in retrievedSeeds:
+        formattedRes += f"{val['seed']} with spawn {val['spawn']['x']},{val['spawn']['z']}\n"
+    await interaction.followup.send(embed=makeEmbed("Found Seeds", formattedRes, interaction.user.name))
 
-'''
-Start utility fns
-'''
+
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="helpme", help=helpDocString)
 async def help_command(ctx):
-    COLOR = 0x115599
+    COMMAND_NUM = 3
     commands_list = [cmd for cmd in ctx.bot.commands if not cmd.hidden]
+    print(len(commands_list))
     # 5 commands per page
-    pages = [commands_list[i:i+5] for i in range(0, len(commands_list), 5)]
-    embeds = []
-
+    pages = [commands_list[i:i+COMMAND_NUM] for i in range(0, len(commands_list), COMMAND_NUM)]
+    commands = []
     for page in pages:
         desc = ""
         for cmd in page:
             desc += f"**!{cmd.name}** - {cmd.help or 'No description provided.'}\n"
-        embed = Embed(title="Lapis' Commands", description=desc, color=COLOR)
-        embeds.append(embed)
+        # 0x115599 is blue
+        embed = Embed(title="Lapis' Commands", description=desc, color=0x115599)
+        commands.append(embed)
         
-    await ctx.send(embed=embeds[0], view=HelpPaginator(embeds=embeds))
+    await ctx.send(embed=commands[0], view=Paginator(commands))
 
 
 @bot.command(name="logout", help="Logs the bot out of Discord. Bot owner only.")

@@ -82,7 +82,7 @@ int main(int argc, char *argv[]){
         }
     } else if(strcmp(command, "spawn_near") == 0){
         if (argc < 7) {
-            printf("Usage: ./inputHandler seed spawn_near numseeds biome structure range\n");
+            printf("{ \"usage\": \"./inputHandler seed spawn_near numseeds biome structure range\" }\n");
             return -1;
         }
         int numSeeds = atoi(argv[3]);
@@ -90,11 +90,21 @@ int main(int argc, char *argv[]){
         char* structure = argv[5];
         int range = atoi(argv[6]);
         SeedArray seedData = spawnNear(numSeeds, biome, structure, range, biomeGenerator);
-        for (int i = 0; i < seedData.length; i++){
+        printf("[\n");
+        for (int i = 0; i < seedData.length; i++) {
             int xCoord = seedData.seeds[i].spawnCoordinates.x;
             int zCoord = seedData.seeds[i].spawnCoordinates.z;
-            printf("{\"seed\": %llu, \"spawn\": {\"x\": %d, \"z\": %d}}\n", seedData.seeds[i].seed, xCoord, zCoord);
+            printf("  {\"seed\": %llu, \"spawn\": {\"x\": %d, \"z\": %d}}", seedData.seeds[i].seed, xCoord, zCoord);
+
+            // Print comma unless it's the last item
+            if (i < seedData.length - 1) {
+                printf(",\n");
+            } else {
+                printf("\n");
+            }
         }
+        printf("]\n");
+
         free(seedData.seeds);
         return 0;
 

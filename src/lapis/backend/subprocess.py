@@ -8,7 +8,7 @@ from src.lapis.helpers.features import *
 
 def connectToInputHandler(author_id: str, args: list[str]) -> dict:
     seed = get_cached_seed(author_id)
-    print(seed)
+    # print(seed)
     result = subprocess.run(
         # spread all args into their individual forms as strings
         [os.getenv("EXECUTABLE_NAME"), seed, *map (str, args)],

@@ -21,7 +21,7 @@ SeedArray spawnNear(int numSeeds, char* biome, char* structure, int radiusFromSp
     const int MAX_RADIUS = 3000;
     const int MAX_SEEDS = 10;
     if (numSeeds <= 0 || numSeeds > MAX_SEEDS) {
-        fprintf(stderr, "Invalid number of seeds requested. Must be greater than 0 and no greater than %d.\n", MAX_SEEDS);
+        printf("{ \"error\": \"Invalid number of seeds requested. Must be greater than 0 and no greater than %d.\" }\n", MAX_SEEDS);
         return (SeedArray){ .seeds = NULL, .length = 0 };
     }
 
@@ -29,18 +29,18 @@ SeedArray spawnNear(int numSeeds, char* biome, char* structure, int radiusFromSp
     int sID = strcmp(structure, "None") ? get_structure_id(structure) : -1;
     
     if (bID == -1 && sID == -1) {
-        fprintf(stderr, "Check your spelling. You must provide either an allowed biome or structure as a search parameter.\n");
+        printf("{ \"error\": \"Check your spelling. You must provide either an allowed biome or structure as a search parameter.\" }\n");
         return (SeedArray){ .seeds = NULL, .length = 0 };
     }
 
     if (radiusFromSpawn <= 0 || radiusFromSpawn > MAX_RADIUS) {
-        fprintf(stderr, "Invalid radius. Must be greater than 0 and no greater than %d.\n", MAX_RADIUS);
+        printf("{ \"error\": \"Invalid radius. Must be greater than 0 and no greater than %d.\" }\n", MAX_RADIUS);
         return (SeedArray){ .seeds = NULL, .length = 0 };
     }
 
     SeedEntry* foundSeeds = malloc(sizeof(SeedEntry) * numSeeds);
     if (!foundSeeds) {
-        fprintf(stderr, "Memory allocation failed\n");
+        printf("{ \"error\": \"Memory allocation failed\" }\n");
         return (SeedArray){ .seeds = NULL, .length = 0 };
     }
 
@@ -70,14 +70,14 @@ SeedArray spawnNear(int numSeeds, char* biome, char* structure, int radiusFromSp
 
             foundSeeds[amountFound++] = (SeedEntry) {seed, spawn};
             if (amountFound == numSeeds) {
-                printf(numSeeds == 1 ? "Found %d seed.\n" : "Found %d seeds.\n" , amountFound);
+                // printf(numSeeds == 1 ? "Found %d seed.\n" : "Found %d seeds.\n" , amountFound);
                 break;
             }
         }
     }
 
     if (amountFound == 0) {
-        printf("No seeds found.\n");
+        printf("{ \"message\": \"No seeds found.\" }\n");
         return (SeedArray){ .seeds = NULL, .length = 0, };
     }
 

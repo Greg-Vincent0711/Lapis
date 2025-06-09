@@ -45,6 +45,10 @@ nearestDocString = '''
     Find the nearest structure or biome.
 '''
 
+spawnNearDocString = '''
+    Find a certain amount of seeds for a given criteria. 10 max.
+'''
+
 helpDocString = '''
     Everything Lapis can do.
 '''

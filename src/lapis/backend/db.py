@@ -88,7 +88,7 @@ def update_location(author_id, location_name, new_coords):
 # avoids table sprawl
 def set_seed(author_id, seed):
     try:
-        res =  TABLE.update_item(
+        res = TABLE.update_item(
             Key={
                 "Author_ID": str(author_id),
                 "Location": generate_hash("SEED")
@@ -100,9 +100,9 @@ def set_seed(author_id, seed):
             ReturnValues="UPDATED_NEW",
         )
         if "Attributes" in res and "World_Seed" in res['Attributes']:
-            return "Successfully set world seed.", True
+            return True, "Successfully set world seed."
         else:
-            return "Failure setting world seed, try again later.", False
+            return False, "Failure setting world seed, try again later."
     except ClientError:
         raise
         
