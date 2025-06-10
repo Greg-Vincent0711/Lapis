@@ -3,17 +3,22 @@ from discord.ui import View, button
 
 '''
     splits item lists into manageable chunks for pagination
-    Returns a list of embeds each containing a section of the list we want to display
+    Returns a list of embeds each containing a slice of the list we want to display
 '''
-def paginate(itemList, perPage):
+def paginate(itemList, perPage, isCommandBased):
     pages = [itemList[i:i+perPage] for i in range(0, len(itemList), perPage)]
     paginated_commands = []
     for page in pages:
         pageInfo = ""
-        for cmd in page:
-            pageInfo += f"**!{cmd.name}** - {cmd.help or 'No description provided.'}\n"
+        if isCommandBased:
+            for cmd in page:
+                pageInfo += f"**!{cmd.name}** - {cmd.help or 'No description provided.'}\n"
+        else:
+            for item in page:
+                pageInfo += f"- {(item)}\n"
         # 0x115599 is blue
-        embed = Embed(title="Lapis' Commands", description=pageInfo, color=0x115599)
+        title = "Lapis' Commands" if isCommandBased else "Saved Locations"
+        embed = Embed(title=title, description=pageInfo, color=0x115599)
         paginated_commands.append(embed)
     return paginated_commands
     

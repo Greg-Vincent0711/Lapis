@@ -99,7 +99,7 @@ async def getLocation(ctx, locationName: str):
 @bot.command(name="delete", help=deleteDocString)
 async def deleteLocation(ctx, locationName: str):
     nameCheck = isCorrectLength(locationName)
-    if nameCheck is not True:
+    if nameCheck is not True:   
         await ctx.send(f"{nameCheck}")
     else:
         try:
@@ -141,13 +141,13 @@ This should also use pagination
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="list", help=listDocString)
 async def list_locations_for_player(ctx):
+    PER_PAGE = 3
     try:
         player_locations = list_locations(ctx.author.id)
-        if len(player_locations) >= 1:
+        if 1 <= len(player_locations) <= PER_PAGE:
             await ctx.send(embed=makeEmbed(description=player_locations, authorName=ctx.author.display_name))
-        elif len(player_locations >= 10):
-            PER_PAGE = 3
-            placesPerPage = paginate(player_locations, PER_PAGE)
+        elif len(player_locations) > PER_PAGE:
+            placesPerPage = paginate(player_locations.split("\n"), PER_PAGE, False)
             await ctx.send(embed=placesPerPage[0], view=Paginator(placesPerPage))
         else:
             await ctx.send(embed=makeErrorEmbed("You have no locations to list."))
@@ -275,7 +275,7 @@ async def spawn_near(interaction: discord.Interaction, numseeds: str, biome: str
 async def help_command(ctx):
     CMDS_PER_PAGE = 3
     commands_list = [cmd for cmd in ctx.bot.commands if not cmd.hidden]
-    pages = paginate(commands_list, CMDS_PER_PAGE)        
+    pages = paginate(commands_list, CMDS_PER_PAGE, True)        
     await ctx.send(embed=pages[0], view=Paginator(pages))
 
 
