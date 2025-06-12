@@ -7,7 +7,7 @@ from discord.ui import View, button
 '''
 def paginate(itemList, perPage, isCommandBased):
     pages = [itemList[i:i+perPage] for i in range(0, len(itemList), perPage)]
-    paginated_commands = []
+    paginatedItems = []
     for page in pages:
         pageInfo = ""
         if isCommandBased:
@@ -19,8 +19,8 @@ def paginate(itemList, perPage, isCommandBased):
         # 0x115599 is blue
         title = "Lapis' Commands" if isCommandBased else "Saved Locations"
         embed = Embed(title=title, description=pageInfo, color=0x115599)
-        paginated_commands.append(embed)
-    return paginated_commands
+        paginatedItems.append(embed)
+    return paginatedItems
     
 
 # helper class to graphically paginate data

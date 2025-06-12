@@ -7,11 +7,12 @@ import discord
 from discord import app_commands
 
 MAX_HORIZONTAL = 30_000_000
+MAX_SEED_LENGTH = 64
 MAX_VERTICAL = 320
 MIN_VERTICAL = -64
 MAX_SUGGESTIONS = 10
 
-def isCorrectLength(name: str) -> str | bool:
+def isCorrectNameLength(name: str) -> str | bool:
     return True if len(name) <= 30 and len(name) >= 3 else "Invalid name length. Must between 3 and 30 characters."
 
 # Checks for coord format and bounds of the coords sent
@@ -47,13 +48,19 @@ def extract_decrypted_locations(encryptedData):
             print(f"Error decrypting an item: {e}")
     return decryptedLocations
 
+'''
+normalizes coordinates: 
+    format_coords(" 12  ,  34,56 ") -> "12,34,56"
+    format_coords("12 34  56") -> "12,34,56"
+'''
 def format_coords(coord_string: str) -> str:
     individualCoords = [coord for coord in re.split(r'[,\s]+', coord_string.strip()) if coord]
     return ",".join(individualCoords)
 
+# seeds must only contain printable characters
 def validate_seed(seed: str):
     printableCharacters = r'^[\w\s!"#$%&\'()*+,\-./:;<=>?@[\\\]^_`{|}~]+$'
-    return 0 <= len(seed) <= 64 and re.match(printableCharacters, seed) != None
+    return 1 <= len(seed.replace(" ", "")) <= MAX_SEED_LENGTH and re.match(printableCharacters, seed) is not None
 
 def to_minecraft_seed(seedValue: str):
     if re.match(r'\d+', seedValue) is not None:
@@ -65,7 +72,9 @@ def to_minecraft_seed(seedValue: str):
         # Take the first 8 bytes and convert to signed 64-bit integer
         return str(struct.unpack('>q', hash_bytes[:8])[0])
 
-# streamlines the process of using seedInfo commands
+'''
+Streamlines the process of using seedInfo commands by adding some autocomplete features
+'''
 async def feature_autocomplete(interaction: discord.Interaction, word: str):
     word = word.lower()
     return [

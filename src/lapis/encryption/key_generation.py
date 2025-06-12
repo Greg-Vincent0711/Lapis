@@ -38,12 +38,12 @@ def generate_fernet():
 # check if the fernet secret exists and retrieve if so
 def retrieve_fernet():
     try:
-        print(f"Found secret for key: {secret_name}")
+        print(f"Found secret for key.")
         retrieved_secret = json.loads(cache.get_secret_string(secret_name))
         return retrieved_secret.get("fernet_key")
     except smClient.exceptions.ResourceNotFoundException:
-        print(f"A secret with the key: `{secret_name}` doesn't exist. Attempting to create...") 
+        print(f"A secret with the passed in key doesn't exist. Attempting to create...") 
         return None
     except ClientError as e:
-        print(f"Error retrieving key: {e}")
+        print(f"There was an outside error retrieving key: {e}")
         return None

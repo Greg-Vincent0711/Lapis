@@ -24,6 +24,7 @@ TODO
 Finish caching stuff - invalidation
 api stuff/hosting
 make it so that the error json from the inputHandler.c code works properly
+Users should be able to capitalize a biome name
 Tests
 '''
 
@@ -53,7 +54,7 @@ async def on_guild_join(ctx):
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="save", help=saveDocString)
 async def saveLocation(ctx, locationName: str, locationCoords: str): 
-    nameCheck = isCorrectLength(locationName)
+    nameCheck = isCorrectNameLength(locationName)
     coordCheck = isCorrectCoordFormat(locationCoords)
     # both of these fns return error messages if not True
     if nameCheck is not True:
@@ -76,7 +77,7 @@ async def saveLocation(ctx, locationName: str, locationCoords: str):
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="get", help=getDocString)
 async def getLocation(ctx, locationName: str):
-    nameCheck = isCorrectLength(locationName)
+    nameCheck = isCorrectNameLength(locationName)
     if nameCheck is not True:
         await ctx.send(embed=makeErrorEmbed("Error", f"{nameCheck}"))
     else:
@@ -98,7 +99,7 @@ async def getLocation(ctx, locationName: str):
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="delete", help=deleteDocString)
 async def deleteLocation(ctx, locationName: str):
-    nameCheck = isCorrectLength(locationName)
+    nameCheck = isCorrectNameLength(locationName)
     if nameCheck is not True:   
         await ctx.send(f"{nameCheck}")
     else:
@@ -116,7 +117,7 @@ async def deleteLocation(ctx, locationName: str):
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="update", help=updateDocString)
 async def updateLocation(ctx, locationName, newCoords):
-    nameCheck = isCorrectLength(locationName)
+    nameCheck = isCorrectNameLength(locationName)
     coordCheck = isCorrectCoordFormat(newCoords)
     if nameCheck is not True:
         await ctx.send(f"{nameCheck}")
@@ -133,21 +134,17 @@ async def updateLocation(ctx, locationName, newCoords):
             error_message = e.response["Error"]["Message"]
             await ctx.send(embed=makeErrorEmbed(f'Error updating {locationName}', error_message))
 
-'''
-TODO
-Scale this function in the future
-This should also use pagination
-'''
+
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="list", help=listDocString)
 async def list_locations_for_player(ctx):
-    PER_PAGE = 3
+    LOCATIONS_PER_PAGE = 3
     try:
         player_locations = list_locations(ctx.author.id)
-        if 1 <= len(player_locations) <= PER_PAGE:
+        if 1 <= len(player_locations) <= LOCATIONS_PER_PAGE:
             await ctx.send(embed=makeEmbed(description=player_locations, authorName=ctx.author.display_name))
-        elif len(player_locations) > PER_PAGE:
-            placesPerPage = paginate(player_locations.split("\n"), PER_PAGE, False)
+        elif len(player_locations) > LOCATIONS_PER_PAGE:
+            placesPerPage = paginate(player_locations.split("\n"), LOCATIONS_PER_PAGE, False)
             await ctx.send(embed=placesPerPage[0], view=Paginator(placesPerPage))
         else:
             await ctx.send(embed=makeErrorEmbed("You have no locations to list."))
@@ -162,7 +159,7 @@ Start S3 Functions
 @commands.cooldown(RATE, PER * 2, commands.BucketType.user)
 @bot.command(name="saveImg", help=saveImgDocString)
 async def saveImage(ctx, location_name):
-    nameCheck = isCorrectLength(location_name)
+    nameCheck = isCorrectNameLength(location_name)
     if nameCheck is not True:
         await ctx.send(embed=makeErrorEmbed("Error", nameCheck))
     else: 
@@ -183,7 +180,7 @@ async def saveImage(ctx, location_name):
 @commands.cooldown(RATE, PER * 2, commands.BucketType.user)
 @bot.command(name="deleteImg", help=deleteImgDocString)
 async def deleteImage(ctx, locationName):
-    nameCheck = isCorrectLength(locationName)
+    nameCheck = isCorrectNameLength(locationName)
     if nameCheck is not True:
         await ctx.send(embed=makeErrorEmbed("Error", nameCheck))
     else:
@@ -253,21 +250,26 @@ async def nearest(interaction: discord.Interaction, feature: str, x_coord: str, 
 @app_commands.describe(
     numseeds="Requested seeds in range 0-10",
     biome="Biome you'd like to spawn in.",
-    structure="Structure(s) within a certain range of your spawn.",
-    range="Distance from spawn the structure should be."
+    structure="Structure within a certain range of your spawn.",
+    range="Distance from spawn the structure should be. 3000 blocks or less."
 )
 @app_commands.autocomplete(biome=feature_autocomplete)
 @app_commands.autocomplete(structure=feature_autocomplete)
 # As long as one of biome/structure is not None, should be fine
 async def spawn_near(interaction: discord.Interaction, numseeds: str, biome: str, structure: str, range: str):
+    # 3000 matches the input handler backend
+    MAX_RANGE = 3000
     await interaction.response.defer()
-    await interaction.followup.send(f"Finding {numseeds} seeds with: a {biome} spawn, and a {structure} within {range} blocks.")
-    arguments = [os.getenv("FN_NAME"), numseeds, biome, structure, range]
-    retrievedSeeds = connectToInputHandler(interaction.user.id, arguments)
-    formattedRes = ""
-    for val in retrievedSeeds:
-        formattedRes += f"{val['seed']} with spawn {val['spawn']['x']},{val['spawn']['z']}\n"
-    await interaction.followup.send(embed=makeEmbed("Found Seeds", formattedRes, interaction.user.name))
+    if range > MAX_RANGE or range <= 0 or not isinstance(range, int):
+        await interaction.followup.send(f"Your range is invalid. Must be an integer between 1 and 3000 blocks total.")
+    else:    
+        await interaction.followup.send(f"Finding {numseeds} seeds with: a {biome} spawn, and a {structure} within {range} blocks.")
+        arguments = [os.getenv("spn"), numseeds, biome, structure, range]
+        retrievedSeeds = connectToInputHandler(interaction.user.id, arguments)
+        formattedRes = ""
+        for seed in retrievedSeeds:
+            formattedRes += f"{seed['seed']} with spawn {seed['spawn']['x']},{seed['spawn']['z']}\n"
+        await interaction.followup.send(embed=makeEmbed("Found Seeds", formattedRes, interaction.user.name))
 
 
 @commands.cooldown(RATE, PER, commands.BucketType.user)
@@ -279,7 +281,7 @@ async def help_command(ctx):
     await ctx.send(embed=pages[0], view=Paginator(pages))
 
 
-@bot.command(name="logout", help="Logs the bot out of Discord. Bot owner only.")
+@bot.command(name="logout", help="Logs the bot out of Discord. Bot owner only.", hidden=True)
 @commands.is_owner()
 async def logout(ctx):
     await ctx.send("Logging out...")
@@ -301,6 +303,7 @@ async def on_command_error(ctx, error):
         await ctx.send(embed=makeErrorEmbed("An error occured", error))
         
 bot.run(TOKEN)
+
 '''
 python3 -m src.lapis.lapis
 '''

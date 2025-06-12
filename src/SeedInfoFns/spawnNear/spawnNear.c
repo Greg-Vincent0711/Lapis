@@ -13,6 +13,7 @@
 #include "../nearestStructure/nearestStructure.h"
 
 /**
+ * Return seeds with certain spawn conditions. User will not directly pass the bot every single field.
  * Returns a seed or multiple with the specified spawn conditions
  * Read parameters as: x seeds where I spawn in this biome, with a structure x blocks from spawn
 */

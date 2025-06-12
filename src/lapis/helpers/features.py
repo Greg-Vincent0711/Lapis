@@ -22,7 +22,7 @@ STRUCTURES = [
 ]
 
 BIOMES = [
-     "ocean",
+    "ocean",
     "plains",
     "desert",
     "mountains",
