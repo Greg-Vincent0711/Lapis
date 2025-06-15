@@ -1,6 +1,7 @@
 import os
+from typing import Optional
 import discord
-from discord import Embed, app_commands
+from discord import app_commands
 from discord.ext import commands
 from discord.ext.commands import CommandNotFound, MissingRequiredArgument, BadArgument
 
@@ -21,10 +22,10 @@ from botocore.exceptions import ClientError
 
 '''
 TODO
-Finish caching stuff - invalidation
 api stuff/hosting
-make it so that the error json from the inputHandler.c code works properly
-Users should be able to capitalize a biome name
+make it so that the error json from the fns that inputHandler.c calls work properly
+make it so that the feature auto complete shows specifically biomes or structures for a param
+go over the secretsmanager stuff
 Tests
 '''
 
@@ -45,7 +46,7 @@ async def on_ready():
 
 @bot.event
 async def on_guild_join(ctx):
-    await ctx.send(embed=makeEmbed("Thanks for inviting me!", "Send '!helpme' to get started."))
+    await ctx.send(embed=makeEmbed("Hi!", "Send '!helpme' to get started."))
 
 '''
  Start DB Functions
@@ -190,9 +191,9 @@ async def deleteImage(ctx, locationName):
         except Exception as e:
             await ctx.send(embed=makeErrorEmbed("Error deleting image.", str(e)))
 
-
 '''
 Start seed functions
+These are both 
 '''
 
 @commands.cooldown(RATE, PER, commands.BucketType.user)
@@ -232,44 +233,52 @@ Start Nearest Fn
 async def nearest(interaction: discord.Interaction, feature: str, x_coord: str, z_coord: str, radius: str):
     await interaction.response.defer() 
     await interaction.followup.send(
-        f"Searching for nearest **{feature}** near ({x_coord}, {z_coord}) within {radius} blocks."
+        f"Searching for nearest **{feature}** near ({x_coord}, {z_coord}) within {radius} blocks..."
     )
-    arguments = [interaction.command.name, feature, x_coord, z_coord, radius]
-    # locateBiomes library fn takes a Y coordinate, doesn't seem to affect outcome of search though
+    arguments = [interaction.command.name, x_coord, z_coord, radius]
+    # converted from a more readable format before passing to subprocess.py
+    feature = format_feature(feature=feature)
     if feature in BIOMES:
+        # locateBiomes library fn takes a Y coordinate, doesn't seem to affect outcome of search
         arguments.insert(3, 0)
+    arguments.insert(1, feature)       
+    print(arguments)
     seedInfo = connectToInputHandler(interaction.user.id, arguments)
+    if seedInfo["error"]:
+            await interaction.followup.send(embed=makeErrorEmbed("Error", seedInfo["error"], interaction.user.name))
     formatted_res = f"Found {seedInfo['feature']} at ({seedInfo['x']}, {seedInfo['z']})"
     await interaction.followup.send(embed=makeEmbed("Retrieved Coordinates", formatted_res, interaction.user.name))
-    
-    
-    
+
 # spawn_near numseeds biome structure range
 @bot.tree.command(name="spn", description=spawnNearDocString)
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @app_commands.describe(
     numseeds="Requested seeds in range 0-10",
-    biome="Biome you'd like to spawn in.",
+    biome="Biome you'd like to spawn in. Either this, or the structure param must be not be empty.",
     structure="Structure within a certain range of your spawn.",
     range="Distance from spawn the structure should be. 3000 blocks or less."
 )
-@app_commands.autocomplete(biome=feature_autocomplete)
-@app_commands.autocomplete(structure=feature_autocomplete)
+@app_commands.autocomplete(biome=biome_autocomplete)
+@app_commands.autocomplete(structure=structure_autocomplete)
 # As long as one of biome/structure is not None, should be fine
-async def spawn_near(interaction: discord.Interaction, numseeds: str, biome: str, structure: str, range: str):
+async def spawn_near(interaction: discord.Interaction, numseeds: str, range: str, biome: Optional[str] = "None", structure: Optional[str] = "None"):
     # 3000 matches the input handler backend
     MAX_RANGE = 3000
+    range = int(range)
     await interaction.response.defer()
-    if range > MAX_RANGE or range <= 0 or not isinstance(range, int):
-        await interaction.followup.send(f"Your range is invalid. Must be an integer between 1 and 3000 blocks total.")
+    if not 1 <= range < MAX_RANGE:
+        await interaction.followup.send("Your range is invalid. Must be an integer between 1 and 3000 blocks total.")
     else:    
-        await interaction.followup.send(f"Finding {numseeds} seeds with: a {biome} spawn, and a {structure} within {range} blocks.")
-        arguments = [os.getenv("spn"), numseeds, biome, structure, range]
+        await interaction.followup.send(f"Finding {numseeds} seeds with: a {biome} spawn, and a {structure} within {range} blocks...")
+        arguments = [os.getenv("spn"), numseeds, format_feature(biome), format_feature(structure), range]
         retrievedSeeds = connectToInputHandler(interaction.user.id, arguments)
-        formattedRes = ""
-        for seed in retrievedSeeds:
-            formattedRes += f"{seed['seed']} with spawn {seed['spawn']['x']},{seed['spawn']['z']}\n"
-        await interaction.followup.send(embed=makeEmbed("Found Seeds", formattedRes, interaction.user.name))
+        if not retrievedSeeds['error']:
+            formattedRes = ""
+            for seed in retrievedSeeds:
+                formattedRes += f"{seed['seed']} with spawn {seed['spawn']['x']},{seed['spawn']['z']}\n"
+            await interaction.followup.send(embed=makeEmbed("Found Seeds", formattedRes, interaction.user.name))
+        else:
+            await interaction.followup.send(embed=makeEmbed("Error retrieving seeds.", retrievedSeeds["error"], interaction.user.name))
 
 
 @commands.cooldown(RATE, PER, commands.BucketType.user)
@@ -287,8 +296,6 @@ async def logout(ctx):
     await ctx.send("Logging out...")
     await bot.close()
     
-
-
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, CommandNotFound):

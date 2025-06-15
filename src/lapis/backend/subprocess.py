@@ -15,10 +15,8 @@ def connectToInputHandler(author_id: str, args: list[str]) -> dict:
         capture_output=True,
         text=True
     )
-    
-    if result.returncode != 0:
-        raise RuntimeError(f"SeedInfoFns failed: {result.stderr.strip()}")
     try:
+        print(repr(result.stdout))
         return json.loads(result.stdout)
     except json.JSONDecodeError:
         raise ValueError(f"Invalid output from SeedInfoFns: {result.stdout.strip()}")

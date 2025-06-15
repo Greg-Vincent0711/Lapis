@@ -29,6 +29,7 @@ def get_cached_seed(user_id):
     row = cursor.fetchone()
     return row[0] if row else None
 
+# may not be used until project becomes more complex
 def invalidate_user_cache(user_id):
     cursor.execute(f"DELETE FROM {os.getenv("CACHE_TABLE")} WHERE user_id = ?", (str(user_id),))
     conn.commit()

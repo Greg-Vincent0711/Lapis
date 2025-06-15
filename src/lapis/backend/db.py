@@ -1,4 +1,3 @@
-# db.py
 import boto3
 from botocore.exceptions import ClientError
 from src.lapis.backend.s3_fns import storeImageInS3, deleteImage
@@ -9,7 +8,7 @@ import os
 dbInstance = boto3.resource('dynamodb')
 TABLE = dbInstance.Table(os.getenv('TABLE_NAME'))
 
-
+# add or completely replace an item
 def save_location(author_id, location_name, coords):
     res = TABLE.put_item(
         Item={
@@ -63,6 +62,7 @@ def delete_location(author_id, location_name):
     except ClientError:
         raise
 
+# partial update of an item's values
 def update_location(author_id, location_name, new_coords):
     try:
         res =  TABLE.update_item(
@@ -114,7 +114,6 @@ def get_seed(author_id):
                 "Location": generate_hash("SEED")
             }
         )
-        # need some kind of caching here
         if 'Item' in res and 'World_Seed' in res['Item']:
             encryptedSeed = res['Item']['World_Seed']
             return decrypt(encryptedSeed.encode()).decode()
@@ -123,10 +122,6 @@ def get_seed(author_id):
     except ClientError:
         raise
     
-
-'''
-TODO - Scale this fn in the future, pagination, grabbing so many elements at a time, etc
-'''
 def list_locations(author_id):
     try:
         response = TABLE.query(

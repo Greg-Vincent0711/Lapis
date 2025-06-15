@@ -72,7 +72,6 @@ int main(int argc, char *argv[]){
             int xCoord = atoi(argv[4]);
             int zCoord = atoi(argv[5]);
             int range = atoi(argv[6]);
-            // printf("%d %d %d\n", xCoord, zCoord, range);
             Pos structureCoords = findNearestStructure(sType, xCoord, zCoord, range, biomeGenerator);
             printf("{\"feature\": \"%s\", \"x\": %d, \"z\": %d}\n", argument, structureCoords.x, structureCoords.z);
             return 0;
@@ -90,22 +89,21 @@ int main(int argc, char *argv[]){
         char* structure = argv[5];
         int range = atoi(argv[6]);
         SeedArray seedData = spawnNear(numSeeds, biome, structure, range, biomeGenerator);
-        printf("[\n");
-        for (int i = 0; i < seedData.length; i++) {
-            int xCoord = seedData.seeds[i].spawnCoordinates.x;
-            int zCoord = seedData.seeds[i].spawnCoordinates.z;
-            printf("  {\"seed\": %llu, \"spawn\": {\"x\": %d, \"z\": %d}}", seedData.seeds[i].seed, xCoord, zCoord);
-
-            // Print comma unless it's the last item
-            if (i < seedData.length - 1) {
-                printf(",\n");
-            } else {
-                printf("\n");
+        if(seedData.length != 0 && seedData.seeds != NULL){
+            printf("[\n");
+            for (int i = 0; i < seedData.length; i++) {
+                int xCoord = seedData.seeds[i].spawnCoordinates.x;
+                int zCoord = seedData.seeds[i].spawnCoordinates.z;
+                printf("{\"seed\": %llu, \"spawn\": {\"x\": %d, \"z\": %d}}", seedData.seeds[i].seed, xCoord, zCoord);
+                if (i < seedData.length - 1) {
+                    printf(",\n");
+                } else {
+                    printf("\n");
+                }
             }
+            printf("]\n");
+            free(seedData.seeds);
         }
-        printf("]\n");
-
-        free(seedData.seeds);
         return 0;
 
     } else {

@@ -1,6 +1,6 @@
 import re
 from src.lapis.encryption.encryption import decrypt
-from src.lapis.helpers.features import ALL_FEATURES
+from src.lapis.helpers.features import *
 import hashlib
 import struct
 import discord
@@ -72,13 +72,45 @@ def to_minecraft_seed(seedValue: str):
         # Take the first 8 bytes and convert to signed 64-bit integer
         return str(struct.unpack('>q', hash_bytes[:8])[0])
 
+# feature is either a structure or biome
+def format_feature(feature: str):
+    if feature in STRUCTURES:
+        feature = feature.replace(" ", "-")
+    elif feature in BIOMES:
+        feature = feature.lower().replace(" ", "-")
+    return feature
 '''
 Streamlines the process of using seedInfo commands by adding some autocomplete features
+
+Note to remember for the future:
+A more efficient solution is to have one function that switches lists
+based on some parameter value so we aren't repeating logic. But the process to implement
+that isn't very simple since you'd have to infer the value from the interaction object
+that's passed. It may create more work than needed. So for now, repeat auto_completes is ok.
 '''
-async def feature_autocomplete(interaction: discord.Interaction, word: str):
-    word = word.lower()
+
+# first two are for spawn near. Each popup window only shows feature specific examples.
+async def biome_autocomplete(interaction: discord.Interaction, current: str):
+    current = current.lower()
+    return [
+        app_commands.Choice(name=feature, value=feature)
+        for feature in BIOMES
+        if feature.lower().startswith(current)
+    ][:MAX_SUGGESTIONS]
+    
+async def structure_autocomplete(interaction: discord.Interaction, current: str):
+    current = current.lower()
+    return [
+        app_commands.Choice(name=feature, value=feature)
+        for feature in STRUCTURES
+        if feature.lower().startswith(current)
+    ][:MAX_SUGGESTIONS]
+
+# specifically for nearest(Structure/Biome)
+async def feature_autocomplete(interaction: discord.Interaction, current: str):
+    current = current.lower()
     return [
         app_commands.Choice(name=feature, value=feature)
         for feature in ALL_FEATURES
-        if feature.lower().startswith(word)
+        if feature.lower().startswith(current)
     ][:MAX_SUGGESTIONS]
