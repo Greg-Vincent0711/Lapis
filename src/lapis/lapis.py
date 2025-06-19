@@ -22,11 +22,9 @@ from botocore.exceptions import ClientError
 
 '''
 TODO
-api stuff/hosting
-make it so that the error json from the fns that inputHandler.c calls work properly
-make it so that the feature auto complete shows specifically biomes or structures for a param
-go over the secretsmanager stuff
 Tests
+go over the secretsmanager stuff
+api stuff/hosting
 '''
 
 load_dotenv()
@@ -266,19 +264,16 @@ async def spawn_near(interaction: discord.Interaction, numseeds: str, range: str
     MAX_RANGE = 3000
     range = int(range)
     await interaction.response.defer()
-    if not 1 <= range < MAX_RANGE:
-        await interaction.followup.send("Your range is invalid. Must be an integer between 1 and 3000 blocks total.")
-    else:    
-        await interaction.followup.send(f"Finding {numseeds} seeds with: a {biome} spawn, and a {structure} within {range} blocks...")
-        arguments = [os.getenv("spn"), numseeds, format_feature(biome), format_feature(structure), range]
-        retrievedSeeds = connectToInputHandler(interaction.user.id, arguments)
-        if not retrievedSeeds['error']:
-            formattedRes = ""
-            for seed in retrievedSeeds:
-                formattedRes += f"{seed['seed']} with spawn {seed['spawn']['x']},{seed['spawn']['z']}\n"
-            await interaction.followup.send(embed=makeEmbed("Found Seeds", formattedRes, interaction.user.name))
-        else:
-            await interaction.followup.send(embed=makeEmbed("Error retrieving seeds.", retrievedSeeds["error"], interaction.user.name))
+    await interaction.followup.send(f"Finding {numseeds} seeds with: a {biome} spawn, and a {structure} within {range} blocks...")
+    arguments = [os.getenv("spn"), numseeds, format_feature(biome), format_feature(structure), range]
+    retrievedSeeds = connectToInputHandler(interaction.user.id, arguments)
+    if not retrievedSeeds['error']:
+        formattedRes = ""
+        for seed in retrievedSeeds:
+            formattedRes += f"{seed['seed']} with spawn {seed['spawn']['x']},{seed['spawn']['z']}\n"
+        await interaction.followup.send(embed=makeEmbed("Found Seeds", formattedRes, interaction.user.name))
+    else:
+        await interaction.followup.send(embed=makeEmbed("Error retrieving seeds.", retrievedSeeds["error"], interaction.user.name))
 
 
 @commands.cooldown(RATE, PER, commands.BucketType.user)
@@ -308,8 +303,9 @@ async def on_command_error(ctx, error):
         await ctx.send(embed=makeErrorEmbed("Wait before sending this command again.", f"Try again in {round(error.retry_after, 1)}s"))
     else:
         await ctx.send(embed=makeErrorEmbed("An error occured", error))
-        
-bot.run(TOKEN)
+
+if __name__ == "__main__":
+    bot.run(TOKEN)
 
 '''
 python3 -m src.lapis.lapis
