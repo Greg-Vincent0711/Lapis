@@ -50,6 +50,7 @@ async def on_guild_join(ctx):
  Start DB Functions
 '''
 
+# needs tests
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="save", help=saveDocString)
 async def saveLocation(ctx, locationName: str, locationCoords: str): 
@@ -73,6 +74,7 @@ async def saveLocation(ctx, locationName: str, locationCoords: str):
             await ctx.send(embed=makeErrorEmbed("Error saving your location and coordinates.", {e}))
 
 
+# needs tests
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="get", help=getDocString)
 async def getLocation(ctx, locationName: str):
@@ -94,7 +96,7 @@ async def getLocation(ctx, locationName: str):
             await ctx.send(embed=makeErrorEmbed(f'Error getting coordinates for your location, try again later.', {e}))
 
         
-
+# needs tests
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="delete", help=deleteDocString)
 async def deleteLocation(ctx, locationName: str):
@@ -112,7 +114,7 @@ async def deleteLocation(ctx, locationName: str):
             error_message = e.response["Error"]["Message"]
             await ctx.send(makeErrorEmbed(f'Error deleting {locationName}.', error_message))
             
-
+# needs tests
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="update", help=updateDocString)
 async def updateLocation(ctx, locationName, newCoords):
@@ -133,7 +135,7 @@ async def updateLocation(ctx, locationName, newCoords):
             error_message = e.response["Error"]["Message"]
             await ctx.send(embed=makeErrorEmbed(f'Error updating {locationName}', error_message))
 
-
+# needs tests
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="list", help=listDocString)
 async def list_locations_for_player(ctx):
@@ -155,6 +157,7 @@ async def list_locations_for_player(ctx):
 Start S3 Functions
 '''
 
+# needs tests
 @commands.cooldown(RATE, PER * 2, commands.BucketType.user)
 @bot.command(name="saveImg", help=saveImgDocString)
 async def saveImage(ctx, location_name):
@@ -176,6 +179,7 @@ async def saveImage(ctx, location_name):
             except (ValueError, InvalidImageFormatError, ImageDownloadError, S3UploadError) as e:
                 await ctx.send(embed=makeErrorEmbed("Error saving your image.", str(e)))
 
+# needs tests
 @commands.cooldown(RATE, PER * 2, commands.BucketType.user)
 @bot.command(name="deleteImg", help=deleteImgDocString)
 async def deleteImage(ctx, locationName):
@@ -193,7 +197,7 @@ async def deleteImage(ctx, locationName):
 Start seed functions
 These are both 
 '''
-
+# needs tests
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="ss", help=setSeedDocString)
 async def setSeed(ctx, seed: str):
@@ -205,6 +209,7 @@ async def setSeed(ctx, seed: str):
         await ctx.send(embed=makeEmbed(title=setSeedAttempt[1]))
         
 
+# needs tests
 # Utility fn for users to see their set seed, more for completeness
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="gs", help=getSeedDocString)
