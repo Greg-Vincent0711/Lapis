@@ -22,7 +22,7 @@ from botocore.exceptions import ClientError
 
 '''
 TODO
-Tests
+Tests - started
 go over the secretsmanager stuff
 api stuff/hosting
 '''
@@ -50,7 +50,7 @@ async def on_guild_join(ctx):
  Start DB Functions
 '''
 
-# needs tests
+# added tests
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="save", help=saveDocString)
 async def saveLocation(ctx, locationName: str, locationCoords: str): 
