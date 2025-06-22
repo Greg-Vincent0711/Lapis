@@ -22,7 +22,8 @@ from botocore.exceptions import ClientError
 
 '''
 TODO
-Tests - started
+Tests - in progress
+Cleanup tests when you finish them
 go over the secretsmanager stuff
 api stuff/hosting
 '''
@@ -74,7 +75,7 @@ async def saveLocation(ctx, locationName: str, locationCoords: str):
             await ctx.send(embed=makeErrorEmbed("Error saving your location and coordinates.", {e}))
 
 
-# needs tests
+# added tests
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="get", help=getDocString)
 async def getLocation(ctx, locationName: str):
@@ -114,7 +115,7 @@ async def deleteLocation(ctx, locationName: str):
             error_message = e.response["Error"]["Message"]
             await ctx.send(makeErrorEmbed(f'Error deleting {locationName}.', error_message))
             
-# needs tests
+# added tests
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="update", help=updateDocString)
 async def updateLocation(ctx, locationName, newCoords):
@@ -135,7 +136,7 @@ async def updateLocation(ctx, locationName, newCoords):
             error_message = e.response["Error"]["Message"]
             await ctx.send(embed=makeErrorEmbed(f'Error updating {locationName}', error_message))
 
-# needs tests
+# added tests
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="list", help=listDocString)
 async def list_locations_for_player(ctx):

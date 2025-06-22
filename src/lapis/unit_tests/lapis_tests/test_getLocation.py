@@ -2,7 +2,6 @@ import sys
 import os
 # fixes an issue keeping pytest from finding project modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../..")))
-
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from src.lapis.lapis import getLocation
@@ -28,11 +27,13 @@ def common_patches():
 
 @pytest.mark.asyncio
 async def test_get_success_no_image(fake_ctx, common_patches):
+    # we set the return value for get_location(DB fn) since we're purely testing what getLocation does
     common_patches["get_location"].return_value = ["100,64,200"]
     await getLocation(fake_ctx, "Home")
     fake_ctx.send.assert_called_once()
     common_patches["make_embed"].assert_called_once()
     assert "Coordinates for Home" in common_patches["make_embed"].call_args.kwargs["title"]
+    assert "100,64,200" in common_patches["make_embed"].call_args.kwargs["description"]
 
 @pytest.mark.asyncio
 async def test_get_success_with_image(fake_ctx, common_patches):

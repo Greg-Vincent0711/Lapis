@@ -60,11 +60,12 @@ async def test_save_invalid_name(common_patches):
     ctx = fake_ctx()
     await saveLocation(ctx, "A"*40, "10 10 10")
     common_patches["make_error_embed"].assert_called_once()
+    # makeErrorEmbed has no kwargs
     assert "Invalid name length" in common_patches["make_error_embed"].call_args.args[1]
 
 @pytest.mark.asyncio
 async def test_save_invalid_coords(common_patches):
     ctx = fake_ctx()
-    await saveLocation(ctx, "RegularName", "bad coordinates")
+    await saveLocation(ctx, "RegularName", "coordinates can't be a string of alphabetical characters")
     common_patches["make_error_embed"].assert_called_once()
     assert "Incorrect format" in common_patches["make_error_embed"].call_args.args[1]
