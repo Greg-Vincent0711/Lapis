@@ -5,14 +5,7 @@ import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 from botocore.exceptions import ClientError
 from src.lapis.lapis import updateLocation
-
-@pytest.fixture
-def fake_ctx():
-    ctx = MagicMock()
-    ctx.author.id = "user123"
-    ctx.author.display_name = "UnitTester"
-    ctx.send = AsyncMock()
-    return ctx
+from testing_utils import fake_ctx
 
 @pytest.fixture
 def common_patches():
@@ -35,51 +28,56 @@ def common_patches():
 
 
 @pytest.mark.asyncio
-async def test_update_success(fake_ctx, common_patches):
+async def test_update_success(common_patches):
+    ctx = fake_ctx()
     common_patches["update_location"].return_value = "10,64,200"
-    await updateLocation(fake_ctx, "Castle", "10 64 200")
+    await updateLocation(ctx, "Castle", "10 64 200")
     common_patches["format_coords"].assert_called_once_with("10 64 200")
     common_patches["update_location"].assert_called_once_with("user123", "Castle", "10,64,200")
     common_patches["make_embed"].assert_called_once()
-    fake_ctx.send.assert_called_once()
+    ctx.send.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_update_invalid_name(fake_ctx, common_patches):
+async def test_update_invalid_name(common_patches):
+    ctx = fake_ctx()
     common_patches["name_check"].return_value = "Invalid name"
-    await updateLocation(fake_ctx, "TooLongName" * 5, "10 64 200")
-    fake_ctx.send.assert_called_once_with("Invalid name")
+    await updateLocation(ctx, "TooLongName" * 5, "10 64 200")
+    ctx.send.assert_called_once_with("Invalid name")
     common_patches["update_location"].assert_not_called()
     common_patches["make_embed"].assert_not_called()
     common_patches["make_error_embed"].assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_update_invalid_coords(fake_ctx, common_patches):
+async def test_update_invalid_coords(common_patches):
+    ctx = fake_ctx()
     common_patches["coord_check"].return_value = "Invalid coords"
-    await updateLocation(fake_ctx, "Castle", "bad coords")
-    fake_ctx.send.assert_called_once_with("Invalid coords")
+    await updateLocation(ctx, "Castle", "bad coords")
+    ctx.send.assert_called_once_with("Invalid coords")
     common_patches["update_location"].assert_not_called()
     common_patches["make_embed"].assert_not_called()
     common_patches["make_error_embed"].assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_update_location_not_found(fake_ctx, common_patches):
+async def test_update_location_not_found(common_patches):
+    ctx = fake_ctx()
     common_patches["update_location"].return_value = None
-    await updateLocation(fake_ctx, "GhostBase", "10 64 200")
+    await updateLocation(ctx, "GhostBase", "10 64 200")
     common_patches["make_error_embed"].assert_called_once_with("Error updating GhostBase")
-    fake_ctx.send.assert_called_once()
+    ctx.send.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_update_client_error(fake_ctx, common_patches):
+async def test_update_client_error(common_patches):
+    ctx = fake_ctx()
     common_patches["update_location"].side_effect = ClientError(
         error_response={"Error": {"Message": "DynamoDB failure"}},
         operation_name="UpdateItem"
     )
-    await updateLocation(fake_ctx, "CrashCity", "0 0 0")
+    await updateLocation(ctx, "NetherFortress", "0 0 0")
     common_patches["make_error_embed"].assert_called_once_with(
-        "Error updating CrashCity", "DynamoDB failure"
+        "Error updating NetherFortress", "DynamoDB failure"
     )
-    fake_ctx.send.assert_called_once()
+    ctx.send.assert_called_once()

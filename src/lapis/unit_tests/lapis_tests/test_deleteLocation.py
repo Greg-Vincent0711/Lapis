@@ -3,15 +3,16 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../..")))
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 from src.lapis.lapis import deleteLocation
+from testing_utils import fake_ctx
 
-def fake_ctx() -> MagicMock:
-    ctx = MagicMock()
-    ctx.author.id = "U999"
-    ctx.author.display_name = "Tester"
-    ctx.send = AsyncMock()
-    return ctx
+# def fake_ctx() -> MagicMock:
+#     ctx = MagicMock()
+#     ctx.author.id = "U999"
+#     ctx.author.display_name = "Tester"
+#     ctx.send = AsyncMock()
+#     return ctx
 
 @pytest.fixture
 def common_patches():
@@ -54,11 +55,11 @@ async def test_delete_not_found(common_patches):
 @pytest.mark.asyncio
 async def test_delete_invalid_name_length(common_patches):
     ctx = fake_ctx()
-    common_patches["name_len"].return_value = "Name must be 3‑30 characters."
+    common_patches["name_len"].return_value = "Name must be 3-30 characters."
 
     await deleteLocation(ctx, "X")
 
-    ctx.send.assert_called_once_with("Name must be 3‑30 characters.")
+    ctx.send.assert_called_once_with("Name must be 3-30 characters.")
     common_patches["delete_location"].assert_not_called()
     common_patches["make_embed"].assert_not_called()
     common_patches["make_error"].assert_not_called()

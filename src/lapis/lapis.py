@@ -97,7 +97,7 @@ async def getLocation(ctx, locationName: str):
             await ctx.send(embed=makeErrorEmbed(f'Error getting coordinates for your location, try again later.', {e}))
 
         
-# needs tests
+# added tests
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="delete", help=deleteDocString)
 async def deleteLocation(ctx, locationName: str):
@@ -158,7 +158,7 @@ async def list_locations_for_player(ctx):
 Start S3 Functions
 '''
 
-# needs tests
+# added tests
 @commands.cooldown(RATE, PER * 2, commands.BucketType.user)
 @bot.command(name="saveImg", help=saveImgDocString)
 async def saveImage(ctx, location_name):
