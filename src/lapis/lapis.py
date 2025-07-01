@@ -180,7 +180,7 @@ async def saveImage(ctx, location_name):
             except (ValueError, InvalidImageFormatError, ImageDownloadError, S3UploadError) as e:
                 await ctx.send(embed=makeErrorEmbed("Error saving your image.", str(e)))
 
-# needs tests
+# added tests
 @commands.cooldown(RATE, PER * 2, commands.BucketType.user)
 @bot.command(name="deleteImg", help=deleteImgDocString)
 async def deleteImage(ctx, locationName):
@@ -195,8 +195,7 @@ async def deleteImage(ctx, locationName):
             await ctx.send(embed=makeErrorEmbed("Error deleting image.", str(e)))
 
 '''
-Start seed functions
-These are both 
+seed functions
 '''
 # needs tests
 @commands.cooldown(RATE, PER, commands.BucketType.user)
