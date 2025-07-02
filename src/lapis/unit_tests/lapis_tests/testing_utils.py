@@ -15,3 +15,14 @@ def fake_ctx(is_bot=False):
     ctx.message.author = ctx.author
     ctx.message.attachments = [attachment]
     return ctx
+
+def mock_interaction(commandName = "nearest"):
+    interaction = MagicMock()
+    interaction.user = MagicMock()
+    interaction.user.id = 5
+    interaction.user.name = "TestUser"
+    interaction.response.defer = AsyncMock()
+    interaction.followup.send = AsyncMock()
+    interaction.command = MagicMock()
+    interaction.command.name = commandName
+    return interaction

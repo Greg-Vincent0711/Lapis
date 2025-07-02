@@ -13,6 +13,7 @@ from src.lapis.helpers.paginator import *
 from src.lapis.backend.db import *
 from src.lapis.backend.cache import *
 from src.lapis.backend.subprocess import connectToInputHandler
+from src.lapis.backend.seed_impl import *
 from src.lapis.helpers.features import *
 
 from dotenv import load_dotenv
@@ -22,10 +23,10 @@ from botocore.exceptions import ClientError
 
 '''
 TODO
-Tests - in progress
+Unit Tests - in progress.
 Cleanup tests when you finish them
 go over the secretsmanager stuff
-api stuff/hosting
+api stuff/hosting w/ fastapi
 '''
 
 load_dotenv()
@@ -197,7 +198,7 @@ async def deleteImage(ctx, locationName):
 '''
 seed functions
 '''
-# needs tests
+
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="ss", help=setSeedDocString)
 async def setSeed(ctx, seed: str):
@@ -209,7 +210,6 @@ async def setSeed(ctx, seed: str):
         await ctx.send(embed=makeEmbed(title=setSeedAttempt[1]))
         
 
-# needs tests
 # Utility fn for users to see their set seed, more for completeness
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="gs", help=getSeedDocString)
@@ -224,6 +224,7 @@ async def getSeed(ctx):
 '''
 Start Nearest Fn
 '''
+# added tests to nearest_impl
 @bot.tree.command(name="nearest", description=nearestDocString)
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @app_commands.describe(
@@ -234,23 +235,8 @@ Start Nearest Fn
 )
 @app_commands.autocomplete(feature=feature_autocomplete)
 async def nearest(interaction: discord.Interaction, feature: str, x_coord: str, z_coord: str, radius: str):
-    await interaction.response.defer() 
-    await interaction.followup.send(
-        f"Searching for nearest **{feature}** near ({x_coord}, {z_coord}) within {radius} blocks..."
-    )
-    arguments = [interaction.command.name, x_coord, z_coord, radius]
-    # converted from a more readable format before passing to subprocess.py
-    feature = format_feature(feature=feature)
-    if feature in BIOMES:
-        # locateBiomes library fn takes a Y coordinate, doesn't seem to affect outcome of search
-        arguments.insert(3, 0)
-    arguments.insert(1, feature)       
-    print(arguments)
-    seedInfo = connectToInputHandler(interaction.user.id, arguments)
-    if seedInfo["error"]:
-            await interaction.followup.send(embed=makeErrorEmbed("Error", seedInfo["error"], interaction.user.name))
-    formatted_res = f"Found {seedInfo['feature']} at ({seedInfo['x']}, {seedInfo['z']})"
-    await interaction.followup.send(embed=makeEmbed("Retrieved Coordinates", formatted_res, interaction.user.name))
+    nearest_impl(interaction, feature, x_coord, z_coord, radius)
+
 
 # spawn_near numseeds biome structure range
 @bot.tree.command(name="spn", description=spawnNearDocString)
@@ -263,23 +249,9 @@ async def nearest(interaction: discord.Interaction, feature: str, x_coord: str, 
 )
 @app_commands.autocomplete(biome=biome_autocomplete)
 @app_commands.autocomplete(structure=structure_autocomplete)
-# As long as one of biome/structure is not None, should be fine
 async def spawn_near(interaction: discord.Interaction, numseeds: str, range: str, biome: Optional[str] = "None", structure: Optional[str] = "None"):
-    # 3000 matches the input handler backend
-    MAX_RANGE = 3000
-    range = int(range)
-    await interaction.response.defer()
-    await interaction.followup.send(f"Finding {numseeds} seeds with: a {biome} spawn, and a {structure} within {range} blocks...")
-    arguments = [os.getenv("spn"), numseeds, format_feature(biome), format_feature(structure), range]
-    retrievedSeeds = connectToInputHandler(interaction.user.id, arguments)
-    if not retrievedSeeds['error']:
-        formattedRes = ""
-        for seed in retrievedSeeds:
-            formattedRes += f"{seed['seed']} with spawn {seed['spawn']['x']},{seed['spawn']['z']}\n"
-        await interaction.followup.send(embed=makeEmbed("Found Seeds", formattedRes, interaction.user.name))
-    else:
-        await interaction.followup.send(embed=makeEmbed("Error retrieving seeds.", retrievedSeeds["error"], interaction.user.name))
-
+    # better form for testing
+    spawn_near_impl(interaction, numseeds, range, biome, structure)
 
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="helpme", help=helpDocString)

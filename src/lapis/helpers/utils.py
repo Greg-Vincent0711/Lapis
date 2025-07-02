@@ -79,6 +79,8 @@ def format_feature(feature: str):
     elif feature in BIOMES:
         feature = feature.lower().replace(" ", "-")
     return feature
+
+
 '''
 Streamlines the process of using seedInfo commands by adding some autocomplete features
 
