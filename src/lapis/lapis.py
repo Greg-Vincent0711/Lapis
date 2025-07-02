@@ -235,7 +235,7 @@ Start Nearest Fn
 )
 @app_commands.autocomplete(feature=feature_autocomplete)
 async def nearest(interaction: discord.Interaction, feature: str, x_coord: str, z_coord: str, radius: str):
-    nearest_impl(interaction, feature, x_coord, z_coord, radius)
+    await nearest_impl(interaction, feature, x_coord, z_coord, radius)
 
 
 # spawn_near numseeds biome structure range
@@ -251,7 +251,7 @@ async def nearest(interaction: discord.Interaction, feature: str, x_coord: str, 
 @app_commands.autocomplete(structure=structure_autocomplete)
 async def spawn_near(interaction: discord.Interaction, numseeds: str, range: str, biome: Optional[str] = "None", structure: Optional[str] = "None"):
     # better form for testing
-    spawn_near_impl(interaction, numseeds, range, biome, structure)
+    await spawn_near_impl(interaction, numseeds, range, biome, structure)
 
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="helpme", help=helpDocString)

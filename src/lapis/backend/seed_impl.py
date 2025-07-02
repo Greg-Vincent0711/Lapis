@@ -37,12 +37,10 @@ async def  nearest_impl(interaction: discord.Interaction, feature: str, x_coord:
 
 
 async def spawn_near_impl(interaction: discord.Interaction, numseeds: str, range: str, biome: Optional[str] = "None", structure: Optional[str] = "None"):
-    # 3000 matches the input handler backend
-    MAX_RANGE = 3000
     range = int(range)
     await interaction.response.defer()
     await interaction.followup.send(f"Finding {numseeds} seeds with: a {biome} spawn, and a {structure} within {range} blocks...")
-    arguments = [os.getenv("spn"), numseeds, format_feature(biome), format_feature(structure), range]
+    arguments = [os.getenv("SPN"), numseeds, format_feature(biome), format_feature(structure), range]
     retrievedSeeds = connectToInputHandler(interaction.user.id, arguments)
     if not retrievedSeeds['error']:
         formattedRes = ""
