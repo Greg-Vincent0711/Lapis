@@ -1,5 +1,5 @@
 '''
-SQLite DB used to store user seeds as a cache
+SQLite DB used to store user seeds as a cache/
 Reduces # of GET requests to DynamoDB if user calls a lot of seedInfoFns - all of which use a seed
 '''
 import sqlite3

@@ -15,7 +15,11 @@ def connectToInputHandler(author_id: str, args: list[str]) -> dict:
         text=True
     )
     try:
-        print(repr(result.stdout))
-        return json.loads(result.stdout)
-    except json.JSONDecodeError:
+        resFromHandler = json.loads(result.stdout)
+        # errors from c code are passed as an object. We need a list.
+        if not isinstance(resFromHandler, list):
+            resFromHandler = [resFromHandler]
+        return resFromHandler
+    except json.JSONDecodeError as e:
+        # Handle malformed JSON
         raise ValueError(f"Invalid output from SeedInfoFns: {result.stdout.strip()}")

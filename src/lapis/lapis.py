@@ -12,21 +12,17 @@ from src.lapis.helpers.embed import *
 from src.lapis.helpers.paginator import *
 from src.lapis.backend.db import *
 from src.lapis.backend.cache import *
-from src.lapis.backend.subprocess import connectToInputHandler
 from src.lapis.backend.seed_impl import *
 from src.lapis.helpers.features import *
 
 from dotenv import load_dotenv
 from botocore.exceptions import ClientError
 
-
-
 '''
 TODO
-Unit Tests - in progress.
-Cleanup tests when you finish them
-go over the secretsmanager stuff
+Go over unit tests - make sure they're well structured
 api stuff/hosting w/ fastapi
+go over the secretsmanager stuff
 '''
 
 load_dotenv()
@@ -42,7 +38,6 @@ PER: float = 5
 @bot.event
 async def on_ready():
     await bot.tree.sync()
-
 
 @bot.event
 async def on_guild_join(ctx):
@@ -224,7 +219,7 @@ async def getSeed(ctx):
 '''
 Start Nearest Fn
 '''
-# added tests to nearest_impl
+
 @bot.tree.command(name="nearest", description=nearestDocString)
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @app_commands.describe(
@@ -235,23 +230,26 @@ Start Nearest Fn
 )
 @app_commands.autocomplete(feature=feature_autocomplete)
 async def nearest(interaction: discord.Interaction, feature: str, x_coord: str, z_coord: str, radius: str):
+    # added tests to nearest_impl
     await nearest_impl(interaction, feature, x_coord, z_coord, radius)
 
 
-# spawn_near numseeds biome structure range
+# spawn_near numseeds biome structure range...
 @bot.tree.command(name="spn", description=spawnNearDocString)
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @app_commands.describe(
-    numseeds="Requested seeds in range 0-10",
+    numseeds="Requested seeds in range 1-10",
     biome="Biome you'd like to spawn in. Either this, or the structure param must be not be empty.",
     structure="Structure within a certain range of your spawn.",
-    range="Distance from spawn the structure should be. 3000 blocks or less."
+    range="Distance from spawn the structure should be 3000 blocks or less."
 )
 @app_commands.autocomplete(biome=biome_autocomplete)
 @app_commands.autocomplete(structure=structure_autocomplete)
 async def spawn_near(interaction: discord.Interaction, numseeds: str, range: str, biome: Optional[str] = "None", structure: Optional[str] = "None"):
-    # better form for testing
+    # added tests
     await spawn_near_impl(interaction, numseeds, range, biome, structure)
+
+
 
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="helpme", help=helpDocString)

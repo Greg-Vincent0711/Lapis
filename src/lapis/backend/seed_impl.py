@@ -17,7 +17,7 @@ from src.lapis.backend.subprocess import connectToInputHandler
 from src.lapis.helpers.features import *
 
 
-async def  nearest_impl(interaction: discord.Interaction, feature: str, x_coord: str, z_coord: str, radius: str):
+async def nearest_impl(interaction: discord.Interaction, feature: str, x_coord: str, z_coord: str, radius: str):
     await interaction.response.defer() 
     await interaction.followup.send(
         f"Searching for nearest **{feature}** near ({x_coord}, {z_coord}) within {radius} blocks..."
@@ -30,6 +30,7 @@ async def  nearest_impl(interaction: discord.Interaction, feature: str, x_coord:
         arguments.insert(3, 0)
     arguments.insert(1, feature)       
     seedInfo = connectToInputHandler(interaction.user.id, arguments)
+    print(seedInfo)
     if seedInfo["error"]:
             await interaction.followup.send(embed=makeErrorEmbed("Error", seedInfo["error"]))
     formatted_res = f"Found {seedInfo['feature']} at ({seedInfo['x']}, {seedInfo['z']})"
@@ -42,10 +43,10 @@ async def spawn_near_impl(interaction: discord.Interaction, numseeds: str, range
     await interaction.followup.send(f"Finding {numseeds} seeds with: a {biome} spawn, and a {structure} within {range} blocks...")
     arguments = [os.getenv("SPN"), numseeds, format_feature(biome), format_feature(structure), range]
     retrievedSeeds = connectToInputHandler(interaction.user.id, arguments)
-    if not retrievedSeeds['error']:
+    if not "error" in retrievedSeeds[0]:
         formattedRes = ""
         for seed in retrievedSeeds:
             formattedRes += f"{seed['seed']} with spawn {seed['spawn']['x']},{seed['spawn']['z']}\n"
         await interaction.followup.send(embed=makeEmbed("Found Seeds", formattedRes, interaction.user.name))
     else:
-        await interaction.followup.send(embed=makeEmbed("Error retrieving seeds.", retrievedSeeds["error"], interaction.user.name))
+        await interaction.followup.send(embed=makeEmbed("Error retrieving seeds.", retrievedSeeds[0]["error"], interaction.user.name))
