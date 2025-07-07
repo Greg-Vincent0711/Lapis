@@ -22,7 +22,6 @@ from botocore.exceptions import ClientError
 TODO
 Go over unit tests - make sure they're well structured
 api stuff/hosting w/ fastapi
-go over the secretsmanager stuff
 '''
 
 load_dotenv()
@@ -193,7 +192,6 @@ async def deleteImage(ctx, locationName):
 '''
 seed functions
 '''
-
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="ss", help=setSeedDocString)
 async def setSeed(ctx, seed: str):

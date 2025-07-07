@@ -17,20 +17,20 @@ def common_patches():
             "makeEmbed": mock_embed
         }
 
-# @pytest.mark.asyncio
-# async def test_spawn_near_success(common_patches):
-#     interaction = mock_interaction()
-#     common_patches["connectToInputHandler"].return_value = [
-#         {"seed": 12345, "spawn": {"x": 100, "z": 200}},
-#         {"seed": 67890, "spawn": {"x": -50, "z": 75}}
-#     ]
-#     await spawn_near_impl(interaction, "2", "1500", biome="Plains", structure="Village")
-#     common_patches["format_feature"].assert_called()
-#     print(common_patches["makeEmbed"].call_args)
-#     common_patches["makeEmbed"].assert_called_once_with(
-#         "Found Seeds", '12345 with spawn 100,200\n67890 with spawn -50,75\n', "TestUser"
-#     )
-#     interaction.followup.send.assert_any_await(embed=common_patches["makeEmbed"].return_value)
+@pytest.mark.asyncio
+async def test_spawn_near_success(common_patches):
+    interaction = mock_interaction()
+    common_patches["connectToInputHandler"].return_value = [
+        {"seed": 12345, "spawn": {"x": 100, "z": 200}},
+        {"seed": 67890, "spawn": {"x": -50, "z": 75}}
+    ]
+    await spawn_near_impl(interaction, "2", "1500", biome="Plains", structure="Village")
+    common_patches["format_feature"].assert_called()
+    print(common_patches["makeEmbed"].call_args)
+    common_patches["makeEmbed"].assert_called_once_with(
+        "Found Seeds", '12345 with spawn 100,200\n67890 with spawn -50,75\n', "TestUser"
+    )
+    interaction.followup.send.assert_any_await(embed=common_patches["makeEmbed"].return_value)
 
 @pytest.mark.asyncio
 async def test_spawn_near_error(common_patches):
