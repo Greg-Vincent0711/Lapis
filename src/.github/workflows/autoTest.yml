@@ -1,0 +1,32 @@
+name: RunTests 
+
+on:
+# tests auto run after changes are appplied to a branch
+  push:
+    branches: [ main ]
+  # tests auto run when a pull-request is open
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      # checks out cloned repo into ubuntu vm
+      uses: actions/checkout@v4
+
+    - name: Install python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest
+
+    - name: Run tests
+      run: |
+        pytest

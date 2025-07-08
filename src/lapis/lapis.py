@@ -20,8 +20,16 @@ from botocore.exceptions import ClientError
 
 '''
 TODO
-Go over unit tests - make sure they're well structured
-api stuff/hosting w/ fastapi
+All testing stuff remaining:
+- Go over unit tests - make sure they're well structured
+- Lapis Integration Tests for different bot use cases
+    * Python <-> C code through subprocess.py (2-3 tests)
+    * DynamoDB tests(maybe one end to end)
+    * S3 tests
+    * run unit/integration tests on git push
+- SeedInfoFn(C Code) Unit Tests
+
+Bot hosting + API setup with FastAPI
 '''
 
 load_dotenv()
