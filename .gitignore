@@ -7,3 +7,4 @@ __pycache__
 inputHandler
 *.db
 .pytest_cache
+SeedInfoFns/tests/dependencies/*
