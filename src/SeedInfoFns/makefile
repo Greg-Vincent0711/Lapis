@@ -23,7 +23,6 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-
 # for filenames under the .o extension, gracefully swap into the build dir, compile based on the .c files
 build/%.o:
 	@mkdir -p build
@@ -32,13 +31,31 @@ build/%.o:
 try: $(TARGET)
 	./$(TARGET) 6815923762915875509 nearest ocean 0 0 3 200
 
+
+# Testing compilation
+TEST_SRCS = tests/nearestBiome/test_nearestB.c tests/dependencies/unity.c
+TEST_OBJS = build/inputHandler.o build/nearestBiome.o build/utilityFns.o
+TEST_BIN = seedInfo_tests
+
+# Rule to build the test binary
+$(TEST_BIN): $(TEST_SRCS) $(TEST_OBJS)
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) -I./tests
+
+test: $(TEST_BIN)
+	./$(TEST_BIN)
+
+
 clean:
 	rm -rf */*.o */*.a build/*
 
 cleanExec: clean
 	rm -f $(TARGET)
 
-.PHONY: all clean cleanAll try help
+cleanTest:
+	rm -f $(TEST_BIN) tests/**/*.o
+
+# file labels
+.PHONY: all test clean cleanAll cleanTest try help
 
 help:
 	@echo "Available make commands:"
