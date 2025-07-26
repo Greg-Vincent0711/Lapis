@@ -1,7 +1,6 @@
 /**
  * TODO
- * - Start Lapis code portion to interact with backend
- * - Write tests for cubiomes code and lapis
+ * - Write tests for cubiomes code
  * - Switch architecture to hosting 
 */
 
@@ -24,14 +23,8 @@ Generator setUpBiomeGenerator(uint64_t seed){
     return biomeGenerator;
 }
 
-/**
- * nearest structure
- * nearest village
- * spawn_near
- * When strictly using the backend, a seed must be passed
- * Lapis will hold onto seeds(and eventually some other info) for players.
-*/
-
+// if doing testing, we need the setUpBiomeGenerator fn, but don't want main to be an entry point
+#ifndef UNIT_TEST
 int main(int argc, char *argv[]){
     // ptr checks for string validity, and we need base 10
     char* end;
@@ -111,3 +104,4 @@ int main(int argc, char *argv[]){
         return 0;
     }
 }
+#endif

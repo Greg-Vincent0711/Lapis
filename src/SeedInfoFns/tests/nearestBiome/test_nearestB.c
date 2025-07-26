@@ -5,6 +5,8 @@
 #include "../../utilityFns/utilityFns.h"
 #include "../../../external/cubiomes/finders.h"
 
+void setUp(void){}
+void tearDown(void){}
 
 
 void test_biome_found() {
