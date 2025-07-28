@@ -5,30 +5,21 @@
 #include "../../utilityFns/utilityFns.h"
 #include "../../../external/cubiomes/finders.h"
 
-void setUp(void){}
-void tearDown(void){}
-
-
 void test_biome_found() {
     const Generator g = setUpBiomeGenerator(1234);
     enum BiomeID bID = get_biome_id("plains");
     Pos result = nearestBiome("plains", 0, 64, 0, 1000, bID, g);
+    printf("%d, %d", result.x, result.z);
     TEST_ASSERT_NOT_EQUAL(-INT_MAX, result.x);
     TEST_ASSERT_NOT_EQUAL(-INT_MAX, result.z);
 }
 
-// void test_invalidCoordinates(){
-//     const Generator g = makeTestGenerator();
-//     enum BiomeID bID = get_biome_id("plains");
-//     Pos result = nearestBiome("x", 0, 64, 0, 1000, bID, g);
-// }
-
-
-
-int main(void) {
-    UNITY_BEGIN();
-    RUN_TEST(test_biome_found);
-    return UNITY_END();
+void test_invalidBiomeName(){
+    const Generator g = setUpBiomeGenerator(1234);
+    enum BiomeID bID = get_biome_id("playland");
+    Pos result = nearestBiome("x", 0, 64, 0, 1000, bID, g);
+    TEST_ASSERT_EQUAL(-INT_MAX, result.x);
+    TEST_ASSERT_EQUAL(-INT_MAX, result.z);
 }
 
 // compiling and running

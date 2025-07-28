@@ -13,7 +13,8 @@
         "neareststructure.h": "c",
         "stdio.h": "c",
         "spawnnear.h": "c",
-        "nearestbiome.h": "c"
+        "nearestbiome.h": "c",
+        "test_nearestb.h": "c"
     },
     "cmake.sourceDirectory": "/Applications/AWS_DiscordBot/external/cubiomes"
 }

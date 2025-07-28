@@ -33,7 +33,7 @@ int main(int argc, char *argv[]){
     uint64_t seed = (uint64_t) strtoull(argv[1], &end, 10);
 
     if(strcmp(end, "\0") || errno == ERANGE){
-        // printf("Seed input is invalid.\n");
+        // print statements are JSON formatted for readability by frontend
         printf("{\"Error\": \"Seed input is invalid.\"}\n");
         return -1;
     }

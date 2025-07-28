@@ -57,7 +57,7 @@ SeedArray spawnNear(int numSeeds, char* biome, char* structure, int radiusFromSp
         int structureMatch = 0;
 
         if (sID != -1) {
-            // MC coords(X,Z) are ± 30 Million, INT_MAX is an arbitrary error value that isn't valid for MC(i.e, (-1, -1)) 
+            // MC coords(X,Z) are ± 30 Million, INT_MAX is an arbitrary error value that isn't valid for MC(i.e, (-1, -1), which is valid) 
             Pos structure = findNearestStructure(sID, spawn.x, spawn.z, radiusFromSpawn, biomeGenerator);
             structureMatch = (structure.x != -INT_MAX && structure.z != -INT_MAX);
         }

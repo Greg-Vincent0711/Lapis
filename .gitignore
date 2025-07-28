@@ -8,3 +8,5 @@ inputHandler
 *.db
 .pytest_cache
 SeedInfoFns/tests/dependencies/*
+inputHandler
+SeedInfo_tests
