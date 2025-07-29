@@ -2,6 +2,7 @@ discord.py
 discord-ui
 aiohttp
 botocore
+boto3
 jmespath
 python-dateutil
 urllib3
