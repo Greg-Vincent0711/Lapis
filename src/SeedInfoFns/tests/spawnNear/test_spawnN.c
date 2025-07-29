@@ -28,6 +28,13 @@ void test_invalid_parameters() {
 }
 
 
+void test_invalid_range_parameter(){
+    Generator g = setUpBiomeGenerator(5555);
+    SeedArray result = spawnNear(1, "Plains", "Village", 4500, g);
+    TEST_ASSERT_NULL(result.seeds);
+    TEST_ASSERT_EQUAL(0, result.length);
+}
+
 void test_valid_biome_and_structure() {
     Generator g = setUpBiomeGenerator(111222333);
     SeedArray result = spawnNear(1, "Plains", "Village", 1500, g);

@@ -27,7 +27,6 @@ All testing stuff remaining:
     * DynamoDB tests(maybe one end to end)
     * S3 tests
     * run unit/integration tests on git push
-- SeedInfoFn(C Code) Unit Tests
 
 Bot hosting + API setup with FastAPI
 '''
