@@ -1,7 +1,7 @@
 <h1>Lapis</h1>
 <p>
     A Minecraft bot built around AWS Microservices and Minecraft-based tooling(lookup Cubitect and the Cubiomes Library).<br/>
-    Lapis has an entire website(currently in the works) dedicated to it's inner workings and all the stats for fellow nerds.
+    Lapis has an [entire website](https://github.com/Greg-Vincent0711/Lapis-Site)(currently in the works) dedicated to it's inner workings and all the stats for fellow nerds.
     But generally, Lapis is meant to resolve a couple small annoyances I had while enduring my 
     annual two week Minecraft phase. Namely, having a consistent place to store coordinates that wasn't my camera roll, only to then have to manually delete a bunch of screenshots later.<br/>
 
