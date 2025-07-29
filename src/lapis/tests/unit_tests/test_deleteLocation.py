@@ -7,12 +7,6 @@ from unittest.mock import AsyncMock, patch
 from src.lapis.lapis import deleteLocation
 from testing_utils import fake_ctx
 
-# def fake_ctx() -> MagicMock:
-#     ctx = MagicMock()
-#     ctx.author.id = "U999"
-#     ctx.author.display_name = "Tester"
-#     ctx.send = AsyncMock()
-#     return ctx
 
 @pytest.fixture
 def common_patches():

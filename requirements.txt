@@ -1,0 +1,14 @@
+discord.py
+discord-ui
+aiohttp
+botocore
+jmespath
+python-dateutil
+urllib3
+dotenv
+requests
+cryptography
+cffi
+aws_secretsmanager_caching
+pytest
+pytest-asyncio
