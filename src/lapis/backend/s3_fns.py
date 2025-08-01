@@ -8,7 +8,7 @@ import mimetypes
 from src.lapis.helpers.exceptions import *
 
 BUCKET = os.getenv('BUCKET_NAME')
-s3Instance = boto3.client('s3')
+s3Instance = boto3.client('s3', region_name=os.getenv("REGION_NAME"))
 fileNameRegex = r"https://[^/]+\.s3\.amazonaws\.com/(.+)"
 
 async def storeImageInS3(message) -> str | None:

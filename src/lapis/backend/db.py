@@ -5,7 +5,7 @@ from src.lapis.encryption.encryption import encrypt, decrypt, generate_hash
 from src.lapis.helpers.utils import extract_decrypted_locations
 import os
 
-dbInstance = boto3.resource('dynamodb')
+dbInstance = boto3.resource('dynamodb', region_name=os.getenv("REGION_NAME"))
 TABLE = dbInstance.Table(os.getenv('TABLE_NAME'))
 
 # add or completely replace an item
