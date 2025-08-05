@@ -7,15 +7,21 @@ from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 from aws_secretsmanager_caching import SecretCache, SecretCacheConfig
 
+def getSMClient():
+    region = os.getenv("REGION_NAME")
+    return session.client(service_name='secretsmanager',region_name=region)
+
 load_dotenv()
 secret_name = os.getenv("SECRET_NAME")
-region_name = os.getenv("REGION_NAME")
 
 # setup sm client and cache
 session = boto3.session.Session()
-smClient = session.client(service_name='secretsmanager',region_name=region_name)
+smClient = getSMClient()
 cache_config = SecretCacheConfig()
 cache = SecretCache( config = cache_config, client = smClient)
+
+
+    
 
 '''
 Generate a fernet key to encrypt client data in transit
