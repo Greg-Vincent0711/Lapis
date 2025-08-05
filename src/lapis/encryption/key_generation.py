@@ -6,12 +6,12 @@ import json
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 from aws_secretsmanager_caching import SecretCache, SecretCacheConfig
-
+load_dotenv()
 def getSMClient():
     region = os.getenv("REGION_NAME")
     return session.client(service_name='secretsmanager',region_name=region)
 
-load_dotenv()
+
 secret_name = os.getenv("SECRET_NAME")
 
 # setup sm client and cache
