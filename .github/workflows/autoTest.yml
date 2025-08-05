@@ -21,10 +21,24 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
+      
 
     - name: Install Python dependencies
       run: |
         pip install -r requirements.txt
+      
+    - name: Build .env for test usage
+      env:
+        BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
+        CACHE_TABLE: ${{ secrets.CACHE_TABLE }}
+        EXECUTABLE_NAME: ${{ secrets.EXECUTABLE_NAME }}
+        KEY_NAME: ${{ secrets.KEY_NAME }}
+        REGION_NAME: ${{ secrets.REGION_NAME }}
+        SECRET_NAME: ${{ secrets.SECRET_NAME }}
+        SEED_CACHE: ${{ secrets.SEED_CACHE }}
+        SPN: ${{ secrets.SPN }}
+        TABLE_NAME: ${{ secrets.TABLE_NAME }}
+        TOKEN: ${{ secrets.TOKEN }}
 
     - name: Run tests
       run: |
