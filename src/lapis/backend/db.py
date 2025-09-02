@@ -5,11 +5,19 @@ from src.lapis.encryption.encryption import encrypt, decrypt, generate_hash
 from src.lapis.helpers.utils import extract_decrypted_locations
 import os
 
-dbInstance = boto3.resource('dynamodb', region_name=os.getenv("REGION_NAME"))
-TABLE = dbInstance.Table(os.getenv('TABLE_NAME'))
+
+'''
+Updating code so that env retrieval is at run time instead of import time
+This is to fix a bug with testing
+'''
+def get_table():
+    dbInstance = boto3.resource('dynamodb', region_name=os.getenv("REGION_NAME"))
+    TABLE = dbInstance.Table(os.getenv('TABLE_NAME'))
+    return TABLE
 
 # add or completely replace an item
 def save_location(author_id, location_name, coords):
+    TABLE = get_table()
     res = TABLE.put_item(
         Item={
             "Author_ID": str(author_id),
@@ -24,6 +32,7 @@ def save_location(author_id, location_name, coords):
     
 
 def get_location(author_id, location_name):
+    TABLE = get_table()
     try:
         res = TABLE.get_item(
             Key={
@@ -47,6 +56,7 @@ def get_location(author_id, location_name):
         raise
 
 def delete_location(author_id, location_name):
+    TABLE = get_table()
     try:
         res = TABLE.delete_item(
             Key={
@@ -64,6 +74,7 @@ def delete_location(author_id, location_name):
 
 # partial update of an item's values
 def update_location(author_id, location_name, new_coords):
+    TABLE = get_table()
     try:
         res =  TABLE.update_item(
             Key={
@@ -87,6 +98,7 @@ def update_location(author_id, location_name, new_coords):
 # seeds will be stored under a special location name
 # avoids table sprawl
 def set_seed(author_id, seed):
+    TABLE = get_table()
     try:
         res = TABLE.update_item(
             Key={
@@ -107,6 +119,7 @@ def set_seed(author_id, seed):
         raise
         
 def get_seed(author_id):
+    TABLE = get_table()
     try:
         res = TABLE.get_item(
             Key={
@@ -123,6 +136,7 @@ def get_seed(author_id):
         raise
     
 def list_locations(author_id):
+    TABLE = get_table()
     try:
         response = TABLE.query(
             KeyConditionExpression=boto3.dynamodb.conditions.Key("Author_ID").eq(str(author_id))
@@ -139,6 +153,7 @@ def list_locations(author_id):
 
 
 async def save_image_url(author_id,location_name,message):
+    TABLE = get_table()
     image_url = await storeImageInS3(message)
     try:
         res = TABLE.update_item(
@@ -161,6 +176,7 @@ async def save_image_url(author_id,location_name,message):
         
 
 async def delete_image_url(author_id, location_name):
+    TABLE = get_table()
     try:
         res = TABLE.update_item(
             Key={

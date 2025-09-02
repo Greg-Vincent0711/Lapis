@@ -7,27 +7,27 @@ from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 from aws_secretsmanager_caching import SecretCache, SecretCacheConfig
 load_dotenv()
+
+
 def getSMClient():
+    session = boto3.session.Session()
     region = os.getenv("REGION_NAME")
     return session.client(service_name='secretsmanager',region_name=region)
 
+def getSecretName():
+    secret_name = os.getenv("SECRET_NAME")
+    return secret_name
 
-secret_name = os.getenv("SECRET_NAME")
-
-# setup sm client and cache
-session = boto3.session.Session()
-smClient = getSMClient()
-cache_config = SecretCacheConfig()
-cache = SecretCache( config = cache_config, client = smClient)
-
-
-    
-
+def get_secret_cache():
+    sm_client = getSMClient()
+    cache_config = SecretCacheConfig()
+    return SecretCache(config=cache_config, client=sm_client)
 '''
 Generate a fernet key to encrypt client data in transit
 Store in SM
 '''
 def generate_fernet():
+    secret_name = getSecretName()
     encryptionKey = retrieve_fernet()
     if encryptionKey is not None:
         return encryptionKey
@@ -43,6 +43,9 @@ def generate_fernet():
 
 # check if the fernet secret exists and retrieve if so
 def retrieve_fernet():
+    secret_name = getSecretName()
+    cache = get_secret_cache()
+    smClient = getSMClient()
     try:
         print(f"Found secret for key.")
         retrieved_secret = json.loads(cache.get_secret_string(secret_name))

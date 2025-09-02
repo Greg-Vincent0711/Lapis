@@ -6,12 +6,18 @@ import re
 from io import BytesIO
 import mimetypes
 from src.lapis.helpers.exceptions import *
-
-BUCKET = os.getenv('BUCKET_NAME')
-s3Instance = boto3.client('s3', region_name=os.getenv("REGION_NAME"))
 fileNameRegex = r"https://[^/]+\.s3\.amazonaws\.com/(.+)"
 
+def getS3Instance():
+    s3Instance = boto3.client('s3', region_name=os.getenv("REGION_NAME"))
+    return s3Instance
+
+def getBucket():
+    return os.getenv('BUCKET_NAME')
+
 async def storeImageInS3(message) -> str | None:
+    s3Instance = getS3Instance()
+    BUCKET = getBucket() 
     image = message.attachments[0]
     fileName = image.filename.lower()
     fileExtension = mimetypes.guess_extension(image.content_type)
@@ -36,6 +42,8 @@ async def storeImageInS3(message) -> str | None:
             raise S3UploadError(f"S3 upload failed: {e}")
 
 async def deleteImage(file_url):
+    s3Instance = getS3Instance()
+    BUCKET = getBucket()
     matchingFileName = re.match(fileNameRegex, file_url)
     if matchingFileName:
         fileName = matchingFileName.group(1)
