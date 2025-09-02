@@ -22,13 +22,13 @@ jobs:
       SPN: ${{ vars.SPN }}
 
     steps:
-    - name: Check REGION_NAME
-      run: |
-        if [ -z "$REGION_NAME" ]; then
-          echo "REGION_NAME is NOT SET"
-        else
-          echo "REGION_NAME is set"
-        fi
+      - name: Check REGION_NAME
+        run: |
+          if [ -z "$REGION_NAME" ]; then
+            echo "REGION_NAME is NOT SET"
+          else
+            echo "REGION_NAME is set"
+          fi
 
       - name: Checkout code
         uses: actions/checkout@v4
