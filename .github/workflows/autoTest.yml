@@ -9,42 +9,31 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      # Secrets
+      BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
+      SECRET_NAME: ${{ secrets.SECRET_NAME }}
+      TABLE_NAME: ${{ secrets.TABLE_NAME }}
+      TOKEN: ${{ secrets.TOKEN }}
+
+      # Non-secrets
+      CACHE_TABLE: ${{ vars.CACHE_TABLE }}
+      EXECUTABLE_NAME: ${{ vars.EXECUTABLE_NAME }}
+      REGION_NAME: ${{ vars.REGION_NAME }}
+      SEED_CACHE: ${{ vars.SEED_CACHE }}
+      SPN: ${{ vars.SPN }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       
-    - name: Install Python dependencies
-      run: |
-        pip install -r requirements.txt
-      
-    - name: Build .env for test usage
-      run: |
-        echo "BUCKET_NAME=${BUCKET_NAME}" >> .env
-        echo "CACHE_TABLE=${CACHE_TABLE}" >> .env
-        echo "EXECUTABLE_NAME=${EXECUTABLE_NAME}" >> .env
-        echo "REGION_NAME=${REGION_NAME}" >> .env
-        echo "SECRET_NAME=${SECRET_NAME}" >> .env
-        echo "SEED_CACHE=${SEED_CACHE}" >> .env
-        echo "SPN=${SPN}" >> .env
-        echo "TABLE_NAME=${TABLE_NAME}" >> .env
-        echo "TOKEN=${TOKEN}" >> .env
-      env:
-        BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
-        CACHE_TABLE: ${{ secrets.CACHE_TABLE }}
-        EXECUTABLE_NAME: ${{ secrets.EXECUTABLE_NAME }}
-        REGION_NAME: ${{ secrets.REGION_NAME }}
-        SECRET_NAME: ${{ secrets.SECRET_NAME }}
-        SEED_CACHE: ${{ secrets.SEED_CACHE }}
-        SPN: ${{ secrets.SPN }}
-        TABLE_NAME: ${{ secrets.TABLE_NAME }}
-        TOKEN: ${{ secrets.TOKEN }}
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-    - name: Run tests
-      run: |
-        pytest
+      - name: Run tests
+        run: pytest
