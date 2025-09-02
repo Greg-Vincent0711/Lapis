@@ -28,7 +28,6 @@ jobs:
         echo "BUCKET_NAME=${BUCKET_NAME}" >> .env
         echo "CACHE_TABLE=${CACHE_TABLE}" >> .env
         echo "EXECUTABLE_NAME=${EXECUTABLE_NAME}" >> .env
-        echo "KEY_NAME=${KEY_NAME}" >> .env
         echo "REGION_NAME=${REGION_NAME}" >> .env
         echo "SECRET_NAME=${SECRET_NAME}" >> .env
         echo "SEED_CACHE=${SEED_CACHE}" >> .env
@@ -39,7 +38,6 @@ jobs:
         BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
         CACHE_TABLE: ${{ secrets.CACHE_TABLE }}
         EXECUTABLE_NAME: ${{ secrets.EXECUTABLE_NAME }}
-        KEY_NAME: ${{ secrets.KEY_NAME }}
         REGION_NAME: ${{ secrets.REGION_NAME }}
         SECRET_NAME: ${{ secrets.SECRET_NAME }}
         SEED_CACHE: ${{ secrets.SEED_CACHE }}
