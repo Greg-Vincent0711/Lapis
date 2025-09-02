@@ -14,10 +14,10 @@ jobs:
       SECRET_NAME: ${{ secrets.SECRET_NAME }}
       TABLE_NAME: ${{ secrets.TABLE_NAME }}
       TOKEN: ${{ secrets.TOKEN }}
+      REGION_NAME: ${{ secrets.REGION_NAME }}
 
       CACHE_TABLE: ${{ vars.CACHE_TABLE }}
       EXECUTABLE_NAME: ${{ vars.EXECUTABLE_NAME }}
-      REGION_NAME: ${{ vars.REGION_NAME }}
       SEED_CACHE: ${{ vars.SEED_CACHE }}
       SPN: ${{ vars.SPN }}
 
