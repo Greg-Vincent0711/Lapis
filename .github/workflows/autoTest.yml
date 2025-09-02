@@ -10,13 +10,11 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     env:
-      # Secrets
       BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
       SECRET_NAME: ${{ secrets.SECRET_NAME }}
       TABLE_NAME: ${{ secrets.TABLE_NAME }}
       TOKEN: ${{ secrets.TOKEN }}
 
-      # Non-secrets
       CACHE_TABLE: ${{ vars.CACHE_TABLE }}
       EXECUTABLE_NAME: ${{ vars.EXECUTABLE_NAME }}
       REGION_NAME: ${{ vars.REGION_NAME }}
@@ -24,6 +22,10 @@ jobs:
       SPN: ${{ vars.SPN }}
 
     steps:
+      - name: Check REGION_NAME
+        run: |
+          echo "REGION_NAME is set: ${REGION_NAME:-NOT SET}"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
