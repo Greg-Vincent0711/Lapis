@@ -21,8 +21,7 @@ from botocore.exceptions import ClientError
 '''
 TODO
 All testing stuff remaining:
-- CI/CD stuff. Unit Tests should auto run on push with
-    Github Actions. Fix this.
+- FINALLY done with testing stuff.
 - Lapis Integration Tests for different bot use cases
     * Python <-> C code through subprocess.py (2-3 tests)
     * DynamoDB tests(maybe one end to end)
