@@ -27,6 +27,7 @@ Generate a fernet key to encrypt client data in transit
 Store in SM
 '''
 def generate_fernet():
+    smClient = getSMClient()
     secret_name = getSecretName()
     encryptionKey = retrieve_fernet()
     if encryptionKey is not None:
