@@ -3,7 +3,8 @@ import hashlib
 from src.lapis.encryption.key_generation import generate_fernet
 from cryptography.fernet import Fernet
 
-fernetInstance = Fernet(generate_fernet())
+def getFernet():
+    fernetInstance = Fernet(generate_fernet())
 
 # provides a deterministic way to search for encrypted values in the DB
 # cannot get data back with a hash though - irreversible
@@ -15,8 +16,10 @@ Fernet encryption is not deterministic, so we can't directly query for encrypted
 before decrypting it. We can however use the stored key to get our data back consistently
 '''
 def encrypt(userData: str):
+    fernetInstance = getFernet()
     # encrypt only takes binary data as a parameter, hence using encode
     return fernetInstance.encrypt(userData.encode())
 
 def decrypt(encryptedData: str):
+    fernetInstance = getFernet()
     return fernetInstance.decrypt(encryptedData)
