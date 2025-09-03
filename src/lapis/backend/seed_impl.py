@@ -17,6 +17,9 @@ from src.lapis.backend.subprocess import connectToInputHandler
 from src.lapis.helpers.features import *
 
 
+def retrieveEnv():
+    return os.getenv("SPN")
+
 async def nearest_impl(interaction: discord.Interaction, feature: str, x_coord: str, z_coord: str, radius: str):
     await interaction.response.defer() 
     await interaction.followup.send(
@@ -39,9 +42,10 @@ async def nearest_impl(interaction: discord.Interaction, feature: str, x_coord: 
 
 async def spawn_near_impl(interaction: discord.Interaction, numseeds: str, range: str, biome: Optional[str] = "None", structure: Optional[str] = "None"):
     range = int(range)
+    SPN = retrieveEnv()
     await interaction.response.defer()
     await interaction.followup.send(f"Finding {numseeds} seeds with: a {biome} spawn, and a {structure} within {range} blocks...")
-    arguments = [os.getenv("SPN"), numseeds, format_feature(biome), format_feature(structure), range]
+    arguments = [SPN, numseeds, format_feature(biome), format_feature(structure), range]
     retrievedSeeds = connectToInputHandler(interaction.user.id, arguments)
     if not "error" in retrievedSeeds[0]:
         formattedRes = ""
