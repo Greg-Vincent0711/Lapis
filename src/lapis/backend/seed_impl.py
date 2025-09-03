@@ -45,7 +45,7 @@ async def spawn_near_impl(interaction: discord.Interaction, numseeds: str, range
     range = int(range)
     await interaction.response.defer()
     await interaction.followup.send(f"Finding {numseeds} seeds with: a {biome} spawn, and a {structure} within {range} blocks...")
-    arguments = ["spawn_near", numseeds, format_feature(biome), format_feature(structure), range]
+    arguments = [interaction.command.name, numseeds, format_feature(biome), format_feature(structure), range]
     retrievedSeeds = connectToInputHandler(interaction.user.id, arguments)
     if not "error" in retrievedSeeds[0]:
         formattedRes = ""
