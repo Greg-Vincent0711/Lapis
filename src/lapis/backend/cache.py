@@ -19,17 +19,17 @@ def cache_user_seed(user_id, seed):
     current = get_cached_seed(user_id)
     if current != seed:
         cursor.execute(f"""
-            REPLACE INTO {os.getenv("CACHE_TABLE")} (user_id, seed)
+            REPLACE INTO {os.getenv('CACHE_TABLE')} (user_id, seed)
             VALUES (?, ?)
         """, (str(user_id), seed))
         conn.commit()
 
 def get_cached_seed(user_id):
-    cursor.execute(f"SELECT seed FROM {os.getenv("CACHE_TABLE")} WHERE user_id = ?", (str(user_id),))
+    cursor.execute(f"SELECT seed FROM {os.getenv('CACHE_TABLE')} WHERE user_id = ?", (str(user_id),))
     row = cursor.fetchone()
     return row[0] if row else None
 
 # may not be used until project becomes more complex
 def invalidate_user_cache(user_id):
-    cursor.execute(f"DELETE FROM {os.getenv("CACHE_TABLE")} WHERE user_id = ?", (str(user_id),))
+    cursor.execute(f"DELETE FROM {os.getenv('CACHE_TABLE')} WHERE user_id = ?", (str(user_id),))
     conn.commit()
