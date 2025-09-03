@@ -5,6 +5,7 @@ from cryptography.fernet import Fernet
 
 def getFernet():
     fernetInstance = Fernet(generate_fernet())
+    return fernetInstance
 
 # provides a deterministic way to search for encrypted values in the DB
 # cannot get data back with a hash though - irreversible

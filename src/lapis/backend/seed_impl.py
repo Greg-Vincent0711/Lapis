@@ -3,7 +3,6 @@ split up seedInfoFn implementations to make testing easier
 fixes an issue where testing with @bot.command.tree keeps the fn from being callable
 '''
 
-import os
 from typing import Optional
 import discord
 from src.lapis.helpers.utils import *

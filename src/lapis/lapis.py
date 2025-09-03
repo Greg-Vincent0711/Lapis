@@ -20,15 +20,15 @@ from botocore.exceptions import ClientError
 
 '''
 TODO
-All testing stuff remaining:
-- FINALLY done with testing stuff.
+All stuff remaining:
+- Bot hosting + API setup with FastAPI
 - Lapis Integration Tests for different bot use cases
     * Python <-> C code through subprocess.py (2-3 tests)
     * DynamoDB tests(maybe one end to end)
     * S3 tests
     * run unit/integration tests on git push
 
-Bot hosting + API setup with FastAPI
+
 '''
 
 load_dotenv()
