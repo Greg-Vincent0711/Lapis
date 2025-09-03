@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch
 from src.lapis.backend.seed_impl import spawn_near_impl
-from testing_utils import mock_interaction
+from testing_utils import mock_interaction_spn
 
 # autospec makes it so that connectToInputHandler mock has the same signature as the actual fn
 @pytest.fixture(autouse=True)
@@ -19,7 +19,7 @@ def common_patches():
 
 @pytest.mark.asyncio
 async def test_spawn_near_success(common_patches):
-    interaction = mock_interaction()
+    interaction = mock_interaction_spn()
     common_patches["connectToInputHandler"].return_value = [
         {"seed": 12345, "spawn": {"x": 100, "z": 200}},
         {"seed": 67890, "spawn": {"x": -50, "z": 75}}
@@ -34,7 +34,7 @@ async def test_spawn_near_success(common_patches):
 
 @pytest.mark.asyncio
 async def test_spawn_near_error(common_patches):
-    interaction = mock_interaction()
+    interaction = mock_interaction_spn()
     common_patches["connectToInputHandler"].return_value = [
         {"error": "Invalid search radius"}
     ]
@@ -54,7 +54,7 @@ async def test_spawn_near_error(common_patches):
 
 @pytest.mark.asyncio
 async def test_spawn_near_defaults(common_patches):
-    interaction = mock_interaction()
+    interaction = mock_interaction_spn()
     common_patches["connectToInputHandler"].return_value = [
         {"seed": 99999, "spawn": {"x": 0, "z": 0}}
     ]

@@ -26,3 +26,14 @@ def mock_interaction(commandName = "nearest"):
     interaction.command = MagicMock()
     interaction.command.name = commandName
     return interaction
+
+def mock_interaction_spn(commandName = "spawn_near"):
+    interaction = MagicMock()
+    interaction.user = MagicMock()
+    interaction.user.id = 5
+    interaction.user.name = "TestUser"
+    interaction.response.defer = AsyncMock()
+    interaction.followup.send = AsyncMock()
+    interaction.command = MagicMock()
+    interaction.command.name = commandName
+    return interaction
