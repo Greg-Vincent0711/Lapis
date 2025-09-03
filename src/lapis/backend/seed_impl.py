@@ -18,7 +18,7 @@ from src.lapis.helpers.features import *
 
 
 def retrieveEnv():
-    return os.getenv("SPN")
+    return os.getenv("SPN", "spawn_near")
 
 async def nearest_impl(interaction: discord.Interaction, feature: str, x_coord: str, z_coord: str, radius: str):
     await interaction.response.defer() 
