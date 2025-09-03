@@ -16,11 +16,6 @@ from src.lapis.backend.cache import *
 from src.lapis.backend.subprocess import connectToInputHandler
 from src.lapis.helpers.features import *
 
-
-def retrieveEnv():
-    SPN = os.getenv("SPN", "spawn_near")
-    return SPN
-
 async def nearest_impl(interaction: discord.Interaction, feature: str, x_coord: str, z_coord: str, radius: str):
     await interaction.response.defer() 
     await interaction.followup.send(
