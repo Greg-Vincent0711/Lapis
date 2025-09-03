@@ -58,14 +58,11 @@ async def test_spawn_near_defaults(common_patches):
     common_patches["connectToInputHandler"].return_value = [
         {"seed": 99999, "spawn": {"x": 0, "z": 0}}
     ]
-
-    await spawn_near_impl(interaction, "1", "1000")  # biome and structure default to "None"
-
+    # biome and structure default to "None"
+    await spawn_near_impl(interaction, "1", "1000")  
     common_patches["format_feature"].assert_any_call("None")
     common_patches["format_feature"].assert_any_call("None")
-
     common_patches["connectToInputHandler"].assert_called_once_with(
         5, ["spawn_near", "1", "none", "none", 1000]
     )
-
     interaction.followup.send.assert_any_await(embed=common_patches["makeEmbed"].return_value)
