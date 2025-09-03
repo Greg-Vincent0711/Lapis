@@ -2,12 +2,13 @@
 import subprocess
 import json
 import os
-from src.lapis.backend.cache import get_cached_seed
+from src.lapis.backend.db import get_seed
 from src.lapis.helpers.features import *
 
 
 def connectToInputHandler(author_id: str, args: list[str]) -> dict:
-    seed = get_cached_seed(author_id)
+    # replacing cache fn, refer to cache.py to see why
+    seed = get_seed(author_id)
     result = subprocess.run(
         # *map spread all args into their individual forms as strings
         [os.getenv("EXECUTABLE_NAME"), seed, *map (str, args)],

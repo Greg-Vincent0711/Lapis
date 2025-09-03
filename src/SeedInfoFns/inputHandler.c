@@ -1,6 +1,5 @@
 /**
  * TODO
- * - Write tests for cubiomes code
  * - Switch architecture to hosting 
 */
 

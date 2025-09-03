@@ -11,7 +11,6 @@ from src.lapis.helpers.exceptions import *
 from src.lapis.helpers.embed import *
 from src.lapis.helpers.paginator import *
 from src.lapis.backend.db import *
-from src.lapis.backend.cache import *
 from src.lapis.backend.subprocess import connectToInputHandler
 from src.lapis.helpers.features import *
 

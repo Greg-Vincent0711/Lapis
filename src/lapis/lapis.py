@@ -11,12 +11,16 @@ from src.lapis.helpers.exceptions import *
 from src.lapis.helpers.embed import *
 from src.lapis.helpers.paginator import *
 from src.lapis.backend.db import *
-from src.lapis.backend.cache import *
+# from src.lapis.backend.cache import *
 from src.lapis.backend.seed_impl import *
 from src.lapis.helpers.features import *
 
 from dotenv import load_dotenv
 from botocore.exceptions import ClientError
+
+'''
+python3 -m src.lapis.lapis
+'''
 
 '''
 TODO
@@ -27,8 +31,6 @@ All stuff remaining:
     * DynamoDB tests(maybe one end to end)
     * S3 tests
     * run unit/integration tests on git push
-
-
 '''
 
 load_dotenv()
@@ -204,19 +206,15 @@ seed functions
 async def setSeed(ctx, seed: str):
     if validate_seed(seed):
         setSeedAttempt = set_seed(ctx.author.id, to_minecraft_seed(seed))
-        # update the cache when set_seed is called
-        cache_user_seed(ctx.author.id, seed)
         # res[1] contains a success/error message
         await ctx.send(embed=makeEmbed(title=setSeedAttempt[1]))
         
-
-# Utility fn for users to see their set seed, more for completeness
 @commands.cooldown(RATE, PER, commands.BucketType.user)
 @bot.command(name="gs", help=getSeedDocString)
 async def getSeed(ctx):
-    cached_seed = get_cached_seed(ctx.author.id)
-    if cached_seed is not None:
-         await ctx.send(embed=makeEmbed("Retrieved Seed", f"{cached_seed}"))
+    seed = get_seed(ctx.author.id)
+    if seed is not None:
+         await ctx.send(embed=makeEmbed("Retrieved Seed", f"{seed}"))
     else:
         await ctx.send(makeErrorEmbed("Error", "Could not find a seed for your user id."))
 
@@ -286,8 +284,4 @@ async def on_command_error(ctx, error):
 
 if __name__ == "__main__":
     bot.run(TOKEN)
-
-'''
-python3 -m src.lapis.lapis
-'''
 

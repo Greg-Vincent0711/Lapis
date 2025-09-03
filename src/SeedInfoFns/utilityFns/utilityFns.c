@@ -161,7 +161,7 @@ enum BiomeID get_biome_id(const char *biome) {
 uint64_t generate_random_seed(uint64_t range_limit) {
     srand(time(NULL));
     long mask = 0x7FFFFFFFFFFFFFFF;
-    // ensure we take only the lowest 16 bits
+    // ensures we take only the lowest 16 bits
     int clamp = 0xFFFF;
     /**
      * create a 64-bit random integer

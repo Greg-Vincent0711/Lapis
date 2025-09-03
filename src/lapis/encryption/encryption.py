@@ -1,3 +1,6 @@
+'''
+encryption.py and key_generation.py together encrypt/decrypt set in transit to DynamoDB and back
+'''
 import hashlib
 # check SM for a key, etc
 from src.lapis.encryption.key_generation import generate_fernet

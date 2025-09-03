@@ -4,6 +4,7 @@ CC = gcc
 CFLAGS = -I../external/cubiomes -fwrapv
 
 # when testing, we don't want inputHandler main to be an entry point
+# so add the UNIT_TEST flag with -D
 CFLAGS_TEST = $(CFLAGS) -DUNIT_TEST
 
 # Linker flags - Cubiomes static lib, math library

@@ -3,6 +3,7 @@
 #include "./nearestStructure/test_nearestS.h"
 #include "./spawnNear/test_spawnN.h"
 
+// potentially add more tests in the future
 void setUp(void){}
 void tearDown(void){}
 
