@@ -43,10 +43,11 @@ Resources:
           KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
 
-  LapisLambdaRole:
+  # ---- Start Lambda Roles --- #
+  LapisDBLambdaRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: LapisLambdaRole
+      RoleName: LapisDBLambdaRole
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -79,12 +80,194 @@ Resources:
                   - s3:PutObject
                   - s3:GetObject
                 Resource: !Sub "arn:aws:s3:::${LapisCodeAndImages}/*"
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref LapisFernetKey
+
+  LapisS3LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: LapisS3LambdaRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: LapisS3Policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*                
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:DeleteObject
+                Resource: !Sub "arn:aws:s3:::${LapisCodeAndImages}/*"
+
+  # ---- End Lambda Roles --- #
+
+  # --- Begin Lambda Functions --- #
+  LapisDBFn:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: LapisDBFn
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt LapisDBLambdaRole.Arn
+      Timeout: 10
+      MemorySize: 256
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref LapisTable
+          BUCKET_NAME: !Ref LapisCodeAndImages
+          SECRET_ARN: !Ref LapisFernetKey
+      Code:
+        S3Bucket: !Ref LapisCodeAndImages
+        S3Key: db_lambda.zip
+
+  LapisS3Fn:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: LapisS3Fn
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt LapisS3LambdaRole.Arn
+      Timeout: 10
+      MemorySize: 256
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref LapisTable
+          BUCKET_NAME: !Ref LapisCodeAndImages
+          SECRET_ARN: !Ref LapisFernetKey
+      Code:
+        S3Bucket: !Ref LapisCodeAndImages
+        S3Key: s3_lambda.zip
+
+  # --- End Lambda Functions --- #
 
   LapisFernetKey:
     Type: AWS::SecretsManager::Secret
     Properties:
       Name: LapisAppSecret
       Description: "Fernet key for Lapis' CSE"
+
+  LapisDBFnLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${LapisDBFn}"
+      RetentionInDays: 14
+
+  LapisS3FnLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${LapisS3Fn}"
+      RetentionInDays: 14
+
+  # --- Begin API GW setup --- #
+  LapisHttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: LapisHttpApi
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+          - DELETE
+          - PUT
+        AllowHeaders:
+          - "*"
+
+  DBIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref LapisHttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LapisDBFn.Arn}/invocations
+      PayloadFormatVersion: "2.0"
+
+  S3Integration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref LapisHttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LapisS3Fn.Arn}/invocations
+      PayloadFormatVersion: "2.0"
+
+  # --- DB Routes --- #
+  POSTRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref LapisHttpApi
+      RouteKey: "POST /items"
+      Target: !Sub integrations/${DBIntegration}
+
+  GETRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref LapisHttpApi
+      RouteKey: "GET /items"
+      Target: !Sub integrations/${DBIntegration}
+  
+  DELETERoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref LapisHttpApi
+      RouteKey: "DELETE /items"
+      Target: !Sub integrations/${DBIntegration}
+  
+  PUTRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref LapisHttpApi
+      RouteKey: "PUT /items"
+      Target: !Sub integrations/${DBIntegration}
+
+  # --- S3 Routes --- #
+  S3Route:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref LapisHttpApi
+      RouteKey: "POST /items/{id}"
+      Target: !Sub integrations/${S3Integration}
+
+  LapisHttpStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref LapisHttpApi
+      StageName: prod
+      AutoDeploy: true
+
+  LapisDBFnInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LapisDBFn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${LapisHttpApi}/*/*/*
+
+  LapisS3FnInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LapisS3Fn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${LapisHttpApi}/*/*/*
 
 Outputs:
   S3BucketName:

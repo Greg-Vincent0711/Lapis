@@ -9,6 +9,9 @@ import os
 '''
 Updating code so that env retrieval is at run time instead of import time
 This is to fix a bug with Github Actions tests on push
+
+
+We have a hashed location
 '''
 def get_table():
     dbInstance = boto3.resource('dynamodb', region_name=os.getenv("REGION_NAME"))
