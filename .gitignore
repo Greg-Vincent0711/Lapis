@@ -11,3 +11,5 @@ SeedInfoFns/tests/dependencies/*
 inputHandler
 SeedInfo_tests
 *.zip
+
+python/*
