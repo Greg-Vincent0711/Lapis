@@ -135,7 +135,7 @@ Resources:
           SECRET_ARN: !Ref LapisFernetKey
       Code:
         S3Bucket: !Ref LapisCodeAndImages
-        S3Key: db_lambda.zip
+        S3Key: db_lambda_updated.zip
 
   LapisS3Fn:
     Type: AWS::Lambda::Function
