@@ -3,6 +3,7 @@ import asyncio
 from botocore.exceptions import ClientError
 from src.lapis.backend.db import *
 
+
 def response(status_code: int, body: dict | str):
     return {
         "statusCode": status_code,
@@ -10,93 +11,81 @@ def response(status_code: int, body: dict | str):
         "body": json.dumps(body if isinstance(body, dict) else {"message": body}),
     }
 
-def lambda_handler(event, context):
+
+def handler(event, context):
     try:
         method = event.get("httpMethod")
         path = event.get("path", "")
+        query_params = event.get("queryStringParameters") or {}
         body = {}
-        query = event.get("queryStringParameters") or {}
-
         if event.get("body"):
             try:
                 body = json.loads(event["body"])
             except json.JSONDecodeError:
                 return response(400, {"error": "Invalid JSON body."})
-            
-        author_id = body.get("author_id")
-        if not author_id:
-            return response(400, {"error": "Missing required field: author_id"})
 
-        # ---------------- POST ----------------
         if method == "POST":
+            author_id = body.get("author_id")
+            if not author_id:
+                return response(400, {"error": "Missing required field in body: author_id"})
             if "location_name" in body and "coords" in body:
-                try:
-                    save_location(author_id, body["location_name"], body["coords"])
-                    return response(200, "Location saved")
-                except Exception as e:
-                    return f"Error saving your location: {e}"
-
-            # Save an image URL for a location
-            if "location_name" in body and "message" in body:
+                msg = save_location(author_id, body["location_name"], body["coords"])
+                return response(200, msg)
+            elif "location_name" in body and "message" in body:
                 msg = asyncio.run(save_image_url(author_id, body["location_name"], body["message"]))
                 return response(200, msg)
-
-            # Set world seed
-            if "seed" in body:
+            elif "seed" in body:
                 success, msg = set_seed(author_id, body["seed"])
                 return response(200 if success else 400, msg)
+            else:
+                return response(400, {"error": "POST request missing required fields."})
 
-            return response(400, "POST request missing required fields.")
-
-        # ---------------- PUT ----------------
         if method == "PUT":
-            # Update a location's coordinates
+            author_id = body.get("author_id")
+            if not author_id:
+                return response(400, {"error": "Missing required field: author_id"})
             if "location_name" in body and "coords" in body:
                 updated_coords = update_location(author_id, body["location_name"], body["coords"])
                 return response(200, {"new_coords": updated_coords})
-
-            return response(400, "PUT request missing required fields.")
-
-        # ---------------- GET ----------------
+            return response(400, {"error": "PUT request missing required fields."})
+        
+        # GET/DELETE use query params instead of method bodies, better practice for Lambda/API GW
         if method == "GET":
-            # Get a specific location
+            author_id = query_params.get("author_id")
+            if author_id is None:
+                return response(400, {"error": "Missing required query parameter: author_id"})
             if path.startswith("/locations/"):
                 location_name = path.split("/locations/")[1]
-                res = get_location(author_id, location_name)
-                return response(200, {"location": res})
+                result = get_location(author_id, location_name)
+                return response(200, {"location": result})
 
-            # Get world seed
-            if path == "/seed":
-                res = get_seed(author_id)
-                return response(200, {"seed": res})
-
-            # List all locations
             if path == "/locations":
-                res = list_locations(author_id)
-                return response(200, {"locations": res})
+                locations = list_locations(author_id)
+                return response(200, {"locations": locations})
 
-            return response(404, "GET route not found.")
+            if path == "/seed":
+                seed = get_seed(author_id)
+                return response(200, {"seed": seed})
+            return response(404, {"error": "GET route not found."})
 
-        # ---------------- DELETE ----------------
         if method == "DELETE":
-            # Delete a location
+            author_id = query_params.get("author_id")
+            if author_id is None:
+                return response(400, {"error": "GET/DELETE requests require an author_id"})
             if path.startswith("/locations/"):
                 location_name = path.split("/locations/")[1]
                 msg = delete_location(author_id, location_name)
                 return response(200, msg)
-
-            # Delete a location's image
             if path.startswith("/images/"):
                 location_name = path.split("/images/")[1]
-                asyncio.run(delete_image_url(author_id, location_name))
-                return response(200, "Deleted image URL")
-
-            return response(404, "DELETE route not found.")
-
-        return response(405, f"Method {method} not allowed.")
+                msg = asyncio.run(delete_image_url(author_id, location_name))
+                return response(200, msg)
+            return response(404, {"error": "DELETE route not found."})
+        
+        return response(405, {"error": f"Method {method} not allowed."})
 
     except ClientError as e:
-        return response(500, f"AWS ClientError: {e.response['Error']['Message']}")
+        return response(500, {"error": f"AWS ClientError: {e.response['Error']['Message']}"})
     except Exception as e:
         print(f"Unexpected error: {e}")
-        return response(500, str(e))
+        return response(500, {"error": str(e)})
