@@ -6,19 +6,16 @@ from src.lapis.helpers.utils import extract_decrypted_locations
 import os
 
 
-'''
-Updating code so that env retrieval is at run time instead of import time
-This is to fix a bug with Github Actions tests on push
-
-
-We have a hashed location
-'''
 def get_table():
+    '''
+        env retrieval is at run time instead of import time
+        This is to fix a bug with Github Actions tests on push
+    '''
     dbInstance = boto3.resource('dynamodb', region_name=os.getenv("REGION_NAME"))
     TABLE = dbInstance.Table(os.getenv('TABLE_NAME'))
     return TABLE
 
-# add or completely replace an item
+# Begin methods using http POST/PUT
 def save_location(author_id, location_name, coords):
     TABLE = get_table()
     res = TABLE.put_item(
@@ -32,48 +29,55 @@ def save_location(author_id, location_name, coords):
     status = res.get("ResponseMetadata", {}).get("HTTPStatusCode")
     if status != 200:
         raise Exception(f"Putting your item failed with status code {status}. Try again later.")
+ 
     
-
-def get_location(author_id, location_name):
+async def save_image_url(author_id,location_name,message):
     TABLE = get_table()
+    image_url = await storeImageInS3(message)
     try:
-        res = TABLE.get_item(
-            Key={
-                "Author_ID": str(author_id),
-                "Location": generate_hash(location_name)
-            }
-        )
-        if 'Item' in res:
-            encryptedCoordinates = res['Item']['Coordinates']
-            retrieved_coordinates = decrypt(encryptedCoordinates.encode()).decode()
-            if res['Item'].get("Image_URL"):
-                encryptedURL = res['Item']['Image_URL']
-                retrieved_URL = decrypt(encryptedURL.encode()).decode()
-                return [retrieved_coordinates, retrieved_URL]
-            else:
-                return [retrieved_coordinates]
-        else: 
-            return None
-    
-    except ClientError:
-        raise
-
-def delete_location(author_id, location_name):
-    TABLE = get_table()
-    try:
-        res = TABLE.delete_item(
+        res = TABLE.update_item(
             Key={
                 "Author_ID": str(author_id),
                 "Location": generate_hash(location_name)
             },
-            ReturnValues="ALL_OLD"
+            UpdateExpression="set Image_URL = :img_url",
+            ExpressionAttributeValues={
+                ":img_url": encrypt(image_url).decode()
+            },
+            ReturnValues="UPDATED_NEW",
         )
-        if 'Attributes' in res:
-            return "Successfully deleted your location."
+        if "Attributes" in res:
+            return "Saved an image URL for your location."
         else:
             return None
+    except Exception:
+        raise
+    
+
+
+# seeds will be stored under a special location name
+# avoids table sprawl
+def set_seed(author_id, seed):
+    TABLE = get_table()
+    try:
+        res = TABLE.update_item(
+            Key={
+                "Author_ID": str(author_id),
+                "Location": generate_hash("SEED")
+            },
+            UpdateExpression="set World_Seed = :seed",
+            ExpressionAttributeValues={
+                ":seed": encrypt(seed).decode()
+            },
+            ReturnValues="UPDATED_NEW",
+        )
+        if "Attributes" in res and "World_Seed" in res['Attributes']:
+            return True, "Successfully set world seed."
+        else:
+            return False, "Failure setting world seed, try again later."
     except ClientError:
         raise
+    
 
 # partial update of an item's values
 def update_location(author_id, location_name, new_coords):
@@ -98,29 +102,34 @@ def update_location(author_id, location_name, new_coords):
     except ClientError:
         raise
 
-# seeds will be stored under a special location name
-# avoids table sprawl
-def set_seed(author_id, seed):
+# End methods using http POST/PUT
+
+# Begin methods using http GET
+def get_location(author_id, location_name):
     TABLE = get_table()
     try:
-        res = TABLE.update_item(
+        res = TABLE.get_item(
             Key={
                 "Author_ID": str(author_id),
-                "Location": generate_hash("SEED")
-            },
-            UpdateExpression="set World_Seed = :seed",
-            ExpressionAttributeValues={
-                ":seed": encrypt(seed).decode()
-            },
-            ReturnValues="UPDATED_NEW",
+                "Location": generate_hash(location_name)
+            }
         )
-        if "Attributes" in res and "World_Seed" in res['Attributes']:
-            return True, "Successfully set world seed."
-        else:
-            return False, "Failure setting world seed, try again later."
+        if 'Item' in res:
+            encryptedCoordinates = res['Item']['Coordinates']
+            retrieved_coordinates = decrypt(encryptedCoordinates.encode()).decode()
+            if res['Item'].get("Image_URL"):
+                encryptedURL = res['Item']['Image_URL']
+                retrieved_URL = decrypt(encryptedURL.encode()).decode()
+                return [retrieved_coordinates, retrieved_URL]
+            else:
+                return [retrieved_coordinates]
+        else: 
+            return None
+    
     except ClientError:
         raise
-        
+
+
 def get_seed(author_id):
     TABLE = get_table()
     try:
@@ -154,29 +163,25 @@ def list_locations(author_id):
     except ClientError:
         raise
 
+# End methods using http GET
 
-async def save_image_url(author_id,location_name,message):
+# Begin methods using http DELETE
+def delete_location(author_id, location_name):
     TABLE = get_table()
-    image_url = await storeImageInS3(message)
     try:
-        res = TABLE.update_item(
+        res = TABLE.delete_item(
             Key={
                 "Author_ID": str(author_id),
                 "Location": generate_hash(location_name)
             },
-            UpdateExpression="set Image_URL = :img_url",
-            ExpressionAttributeValues={
-                ":img_url": encrypt(image_url).decode()
-            },
-            ReturnValues="UPDATED_NEW",
+            ReturnValues="ALL_OLD"
         )
-        if "Attributes" in res:
-            return "Saved an image URL for your location."
+        if 'Attributes' in res:
+            return "Successfully deleted your location."
         else:
             return None
-    except Exception:
+    except ClientError:
         raise
-        
 
 async def delete_image_url(author_id, location_name):
     TABLE = get_table()
@@ -194,4 +199,4 @@ async def delete_image_url(author_id, location_name):
             await deleteImage(deleteURL)
     except Exception:
         raise
-            
+# End methods using http delete
