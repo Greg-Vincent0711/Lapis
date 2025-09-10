@@ -85,7 +85,8 @@ Resources:
                   - secretsmanager:GetSecretValue
                   - secretsmanager:CreateSecret
                   - secretsmanager:DescribeSecret
-                Resource: !Ref LapisFernetKey
+                Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:LapisFernetSecret*"
+
 
   LapisS3LambdaRole:
     Type: AWS::IAM::Role
