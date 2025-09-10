@@ -83,6 +83,8 @@ Resources:
               - Effect: Allow
                 Action:
                   - secretsmanager:GetSecretValue
+                  - secretsmanager:CreateSecret
+                  - secretsmanager:DescribeSecret
                 Resource: !Ref LapisFernetKey
 
   LapisS3LambdaRole:
@@ -135,7 +137,7 @@ Resources:
           SECRET_ARN: !Ref LapisFernetKey
       Code:
         S3Bucket: !Ref LapisCodeAndImages
-        S3Key: db_lambda_updated.zip
+        S3Key: DB_lambda.zip
 
   LapisS3Fn:
     Type: AWS::Lambda::Function

@@ -2,7 +2,7 @@ import json
 import asyncio
 from botocore.exceptions import ClientError
 from src.lapis.helpers.exceptions import *
-from src.lapis.backend.s3_fns import storeImageInS3, deleteImage
+from src.lapis.backend.s3_fns import storeImageInS3
 
 fileNameRegex = r"https://[^/]+\.s3\.amazonaws\.com/(.+)"
 

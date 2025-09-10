@@ -83,7 +83,6 @@ def handler(event, context):
             return response(404, {"error": "DELETE route not found."})
         
         return response(405, {"error": f"Method {method} not allowed."})
-
     except ClientError as e:
         return response(500, {"error": f"AWS ClientError: {e.response['Error']['Message']}"})
     except Exception as e:
