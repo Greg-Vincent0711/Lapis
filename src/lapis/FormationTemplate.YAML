@@ -74,6 +74,7 @@ Resources:
                   - dynamodb:GetItem
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
+                  - dynamodb:Query
                 Resource: !GetAtt LapisTable.Arn
               - Effect: Allow
                 Action:
