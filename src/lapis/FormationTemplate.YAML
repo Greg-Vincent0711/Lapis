@@ -88,38 +88,6 @@ Resources:
                   - secretsmanager:DescribeSecret
                 Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:LapisFernetSecret*"
 
-
-  LapisS3LambdaRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: LapisS3LambdaRole
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Policies:
-        - PolicyName: LapisS3Policy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: arn:aws:logs:*:*:*                
-              - Effect: Allow
-                Action:
-                  - s3:PutObject
-                  - s3:GetObject
-                  - s3:DeleteObject
-                Resource: !Sub "arn:aws:s3:::${LapisCodeAndImages}/*"
-
   # ---- End Lambda Roles --- #
 
   # --- Begin Lambda Functions --- #
@@ -141,24 +109,6 @@ Resources:
         S3Bucket: !Ref LapisCodeAndImages
         S3Key: DB_lambda.zip
 
-  LapisS3Fn:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: LapisS3Fn
-      Runtime: python3.12
-      Handler: index.handler
-      Role: !GetAtt LapisS3LambdaRole.Arn
-      Timeout: 10
-      MemorySize: 256
-      Environment:
-        Variables:
-          TABLE_NAME: !Ref LapisTable
-          BUCKET_NAME: !Ref LapisCodeAndImages
-          SECRET_ARN: !Ref LapisFernetKey
-      Code:
-        S3Bucket: !Ref LapisCodeAndImages
-        S3Key: s3_lambda.zip
-
   # --- End Lambda Functions --- #
 
   LapisFernetKey:
@@ -171,12 +121,6 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub "/aws/lambda/${LapisDBFn}"
-      RetentionInDays: 14
-
-  LapisS3FnLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub "/aws/lambda/${LapisS3Fn}"
       RetentionInDays: 14
 
   # --- Begin API GW setup --- #
@@ -203,14 +147,6 @@ Resources:
       ApiId: !Ref LapisHttpApi
       IntegrationType: AWS_PROXY
       IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LapisDBFn.Arn}/invocations
-      PayloadFormatVersion: "2.0"
-
-  S3Integration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref LapisHttpApi
-      IntegrationType: AWS_PROXY
-      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LapisS3Fn.Arn}/invocations
       PayloadFormatVersion: "2.0"
 
   # --- DB Routes --- #
@@ -242,14 +178,6 @@ Resources:
       RouteKey: "PUT /items"
       Target: !Sub integrations/${DBIntegration}
 
-  # --- S3 Routes --- #
-  S3Route:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref LapisHttpApi
-      RouteKey: "POST /items/{id}"
-      Target: !Sub integrations/${S3Integration}
-
   LapisHttpStage:
     Type: AWS::ApiGatewayV2::Stage
     Properties:
@@ -264,15 +192,7 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${LapisHttpApi}/*/*/*
-
-  LapisS3FnInvokePermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref LapisS3Fn
-      Action: lambda:InvokeFunction
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${LapisHttpApi}/*/*/*
-
+      
 Outputs:
   S3BucketName:
     Description: "Bucket for imgs users send to Lapis."

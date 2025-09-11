@@ -97,7 +97,8 @@ def handler(event, context):
             return response(404, {"error": "GET route not found."})
 
         # ---------------- DELETE ----------------
-        if method == "DELETE":
+        location_name = event.get("pathParameters", {}).get("location_name")
+        if method == "DELETE" and location_name:
             author_id = query_params.get("Author_ID")
             if not author_id:
                 return response(400, {"error": "GET/DELETE requests require an Author_ID"})
