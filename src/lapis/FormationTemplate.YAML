@@ -43,7 +43,7 @@ Resources:
           KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
 
-  # ---- Start Lambda Roles --- #
+  # Lambda Roles
   LapisDBLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -88,15 +88,41 @@ Resources:
                   - secretsmanager:DescribeSecret
                 Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:LapisFernetSecret*"
 
-  # ---- End Lambda Roles --- #
+  LapisSeedLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: LapisSeedLambdaRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 
+                - lambda.amazonaws.com
+            Action: 
+              - sts:AssumeRole
+          - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+      Policies:
+        - PolicyName: LapisSeedPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
 
-  # --- Begin Lambda Functions --- #
+  # Lambda Functions
   LapisDBFn:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: LapisDBFn
       Runtime: python3.12
-      Handler: index.handler
+      Handler: db_lambda.handler
       Role: !GetAtt LapisDBLambdaRole.Arn
       Timeout: 10
       MemorySize: 256
@@ -109,7 +135,22 @@ Resources:
         S3Bucket: !Ref LapisCodeAndImages
         S3Key: DB_lambda.zip
 
-  # --- End Lambda Functions --- #
+  LapisSeedFn:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: LapisSeedFn
+      Runtime: python3.12
+      Handler: seed_lambda.handler
+      Role: !GetAtt LapisSeedLambdaRole.Arn
+      Timeout: 10
+      MemorySize: 256
+      Environment:
+        Variables:
+          SECRET_ARN: !Ref LapisFernetKey
+          EXECUTABLE_NAME: ./src/SeedInfoFns/inputHandler
+      Code:
+        S3Bucket: !Ref LapisCodeAndImages
+        S3Key: seed_lambda.zip
 
   LapisFernetKey:
     Type: AWS::SecretsManager::Secret
@@ -117,13 +158,20 @@ Resources:
       Name: LapisAppSecret
       Description: "Fernet key for Lapis' CSE"
 
+  # Log groups
   LapisDBFnLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub "/aws/lambda/${LapisDBFn}"
       RetentionInDays: 14
 
-  # --- Begin API GW setup --- #
+  LapisSeedFnLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${LapisSeedFn}"
+      RetentionInDays: 14
+
+  # API Gateway
   LapisHttpApi:
     Type: AWS::ApiGatewayV2::Api
     Properties:
@@ -141,6 +189,7 @@ Resources:
         AllowHeaders:
           - "*"
 
+  # Lambda integrations
   DBIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
@@ -149,29 +198,44 @@ Resources:
       IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LapisDBFn.Arn}/invocations
       PayloadFormatVersion: "2.0"
 
-  # --- DB Routes --- #
-  POSTRoute:
+  SeedIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref LapisHttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LapisSeedFn.Arn}/invocations
+      PayloadFormatVersion: "2.0"
+
+  # API Gateway Routes
+  SeedGETRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref LapisHttpApi
+      RouteKey: "GET /seedInfo"
+      Target: !Sub integrations/${SeedIntegration}
+
+  DBPOSTRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref LapisHttpApi
       RouteKey: "POST /items"
       Target: !Sub integrations/${DBIntegration}
 
-  GETRoute:
+  DBGETRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref LapisHttpApi
       RouteKey: "GET /items"
       Target: !Sub integrations/${DBIntegration}
-  
-  DELETERoute:
+
+  DBDELETERoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref LapisHttpApi
       RouteKey: "DELETE /items"
       Target: !Sub integrations/${DBIntegration}
-  
-  PUTRoute:
+
+  DBPUTRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref LapisHttpApi
@@ -185,6 +249,7 @@ Resources:
       StageName: prod
       AutoDeploy: true
 
+  # Lambda permissions
   LapisDBFnInvokePermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -192,7 +257,15 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${LapisHttpApi}/*/*/*
-      
+
+  LapisSeedFnInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LapisSeedFn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${LapisHttpApi}/*/*/*
+
 Outputs:
   S3BucketName:
     Description: "Bucket for imgs users send to Lapis."
@@ -201,7 +274,7 @@ Outputs:
   DynamoDBTableName:
     Description: "Location data."
     Value: !Ref LapisTable
-  
+
   SecretARN:
     Description: "ARN of Lapis' stored fernet key."
     Value: !Ref LapisFernetKey
