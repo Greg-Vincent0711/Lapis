@@ -97,14 +97,10 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service: 
+              Service:
                 - lambda.amazonaws.com
-            Action: 
-              - sts:AssumeRole
-            Resource: !GetAtt LapisTable.Arn
-          - Effect: Allow
             Action:
-                - dynamodb:GetItem
+              - sts:AssumeRole
       Policies:
         - PolicyName: LapisSeedPolicy
           PolicyDocument:
@@ -116,6 +112,11 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                Resource: !GetAtt LapisTable.Arn
+
 
   # Lambda Functions
   LapisDBFn:

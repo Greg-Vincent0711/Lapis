@@ -71,7 +71,7 @@ def set_seed(author_id: str, seed: str) -> tuple[bool, str]:
         res = table.update_item(
             Key={
                 "Author_ID": str(author_id),
-                "Location": generate_hash("SEED")
+                "Location": "SEED"
             },
             UpdateExpression="SET World_Seed = :seed",
             ExpressionAttributeValues={
@@ -148,7 +148,7 @@ def get_seed(author_id: str) -> str:
         res = table.get_item(
             Key={
                 "Author_ID": str(author_id),
-                "Location": generate_hash("SEED")
+                "Location": "SEED"
             }
         )
         if 'Item' not in res or 'World_Seed' not in res['Item']:
