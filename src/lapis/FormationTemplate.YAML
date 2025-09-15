@@ -101,8 +101,9 @@ Resources:
                 - lambda.amazonaws.com
             Action: 
               - sts:AssumeRole
+            Resource: !GetAtt LapisTable.Arn
           - Effect: Allow
-              Action:
+            Action:
                 - dynamodb:GetItem
       Policies:
         - PolicyName: LapisSeedPolicy
