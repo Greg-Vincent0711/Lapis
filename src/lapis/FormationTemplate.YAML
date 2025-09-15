@@ -129,7 +129,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: LapisDBFn
-      Runtime: python3.12
+      Runtime: python3.11
       Handler: db_lambda.handler
       Role: !GetAtt LapisDBLambdaRole.Arn
       Timeout: 10
@@ -138,7 +138,7 @@ Resources:
         Variables:
           TABLE_NAME: !Ref LapisTable
           BUCKET_NAME: !Ref LapisCodeAndImages
-          SECRET_ARN: !Ref LapisFernetKey
+          SECRET_NAME: !Ref LapisFernetKey
       Code:
         S3Bucket: !Ref LapisCodeAndImages
         S3Key: DB_lambda.zip
@@ -147,15 +147,16 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: LapisSeedFn
-      Runtime: python3.12
+      Runtime: python3.11
       Handler: seed_lambda.handler
       Role: !GetAtt LapisSeedLambdaRole.Arn
       Timeout: 10
       MemorySize: 256
       Environment:
         Variables:
-          SECRET_ARN: !Ref LapisFernetKey
-          EXECUTABLE_NAME: ./src/SeedInfoFns/inputHandler
+          SECRET_NAME: !Ref LapisFernetKey
+          TABLE_NAME: !Ref LapisTable
+          EXECUTABLE_NAME: ./src/lapis/inputHandler
       Code:
         S3Bucket: !Ref LapisCodeAndImages
         S3Key: seed_lambda.zip
