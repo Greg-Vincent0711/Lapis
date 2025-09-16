@@ -13,7 +13,8 @@ def connectToInputHandler(author_id: str, args: list[str]) -> dict:
         # *map spread all args into their individual forms as strings
         [os.getenv("EXECUTABLE_NAME"), seed, *map (str, args)],
         capture_output=True,
-        text=True
+        text=True,
+        shell=True
     )
     try:
         resFromHandler = json.loads(result.stdout)

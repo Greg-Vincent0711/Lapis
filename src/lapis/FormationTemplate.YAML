@@ -84,9 +84,13 @@ Resources:
               - Effect: Allow
                 Action:
                   - secretsmanager:GetSecretValue
-                  - secretsmanager:CreateSecret
                   - secretsmanager:DescribeSecret
                 Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:LapisFernetSecret*"
+
+              - Effect: Allow
+                Action:
+                  - secretsmanager:CreateSecret
+                Resource: "*"
 
   LapisSeedLambdaRole:
     Type: AWS::IAM::Role
@@ -119,9 +123,13 @@ Resources:
               - Effect: Allow
                 Action:
                   - secretsmanager:GetSecretValue
-                  - secretsmanager:CreateSecret
                   - secretsmanager:DescribeSecret
-                Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:LapisFernetSecret*"
+                Resource: "*"
+
+              - Effect: Allow
+                Action:
+                  - secretsmanager:CreateSecret
+                Resource: "*"
 
 
   # Lambda Functions
@@ -159,7 +167,7 @@ Resources:
           EXECUTABLE_NAME: ./src/lapis/inputHandler
       Code:
         S3Bucket: !Ref LapisCodeAndImages
-        S3Key: seed_lambda.zip
+        S3Key: SD_lambda.zip
 
   LapisFernetKey:
     Type: AWS::SecretsManager::Secret
