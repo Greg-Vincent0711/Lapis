@@ -1,6 +1,7 @@
 import json
 import asyncio
 from botocore.exceptions import ClientError
+from oauth import retrieveAccessToken, getUserInfo
 from src.lapis.backend.db import *
 
 # response object used throughout 
@@ -50,13 +51,20 @@ def handler(event, context):
         # ---------------- POST / PUT ----------------
         if method in ("POST", "PUT"):
             author_id = body.get("Author_ID")
-            if not author_id:
+            # if not oauth, then we have an issue
+            if not author_id and not "authCode" in body:
                 return response(400, {"error": "Missing required field: Author_ID"})
 
             if not location_name:
                 return response(400, {"error": "Missing location_name in path or body."})
 
             if method == "POST":
+                if "authCode" in body and path == "/auth/callback":
+                    authCode = body.get("authCode")
+                    accessToken = retrieveAccessToken(authCode)
+                    userInfo = getUserInfo(accessToken)
+                    return response(200, userInfo)
+                
                 # remember, errors are handled by the specific methods being called.
                 if "coords" in body:
                     msg = save_location(author_id, location_name, body["coords"])

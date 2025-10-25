@@ -86,6 +86,7 @@ Pos findNearestStructure(enum StructureType sType, int blockX, int blockZ, int m
     if (minDistSq == LONG_MAX) {
         nearest.x = -INT_MAX;
         nearest.z = -INT_MAX;
+        printf("Couldn't find correct a location.");
     }
 
     return nearest;

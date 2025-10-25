@@ -167,7 +167,7 @@ Resources:
           EXECUTABLE_NAME: ./src/lapis/inputHandler
       Code:
         S3Bucket: !Ref LapisCodeAndImages
-        S3Key: SD_lambda.zip
+        S3Key: seed_lambda.zip
 
   LapisFernetKey:
     Type: AWS::SecretsManager::Secret

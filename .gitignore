@@ -12,5 +12,7 @@ inputHandler
 SeedInfo_tests
 *.zip
 
+layers/*
+layers
 python/*
 python
