@@ -8,7 +8,10 @@ from src.lapis.backend.db import *
 def response(status_code: int, body: dict | str):
     return {
         "statusCode": status_code,
-        "headers": {"Content-Type": "application/json"},
+        'headers': {
+        'Access-Control-Allow-Origin': 'http://localhost:5173',
+        'Access-Control-Allow-Credentials': 'true',
+        'Content-Type': 'application/json'},
         "body": json.dumps(body if isinstance(body, dict) else {"message": body}),
     }
 
@@ -47,7 +50,6 @@ def handler(event, context):
         location_name_from_query_param = extract_location_name(path)
         # Use path parameter if present, fallback to body. 
         location_name = location_name_from_query_param or body.get("location_name")
-
         # ---------------- POST / PUT ----------------
         if method in ("POST", "PUT"):
             author_id = body.get("Author_ID")
@@ -61,7 +63,9 @@ def handler(event, context):
             if method == "POST":
                 if "authCode" in body and path == "/auth/callback":
                     authCode = body.get("authCode")
+                    print(f"Have auth code {authCode}")
                     accessToken = retrieveAccessToken(authCode)
+                    print(f"Have {accessToken}")
                     userInfo = getUserInfo(accessToken)
                     return response(200, userInfo)
                 
