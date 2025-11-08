@@ -1,4 +1,5 @@
 import boto3
+from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 from src.lapis.backend.s3_fns import storeImageInS3, deleteImage
 from src.lapis.encryption.encryption import encrypt, decrypt, generate_hash
@@ -8,7 +9,7 @@ import logging
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-
+MAX = 10
 
 def get_table():
     """
@@ -18,24 +19,72 @@ def get_table():
     table = db_instance.Table(os.getenv('TABLE_NAME'))
     return table
 
+# TODO - Implement some sort of caching in the future
+# since this is a small app rn not necessary but better to have
+def get_location_count(author_id: str):
+    # Get table
+    table = get_table()
+    # Query for all user locations for an author_id
+    response = table.query(
+        KeyConditionExpression=Key('Author_ID').eq(author_id),
+        Select='COUNT'
+    )    
+    return response['Count']
 
 # ---------------- POST / PUT METHODS ----------------
 def save_location(author_id: str, location_name: str, coords: str) -> str:
-    table = get_table()
-    res = table.put_item(
-        Item={
-            "Author_ID": str(author_id),
-            "Location": generate_hash(location_name),
-            "Location_Name": encrypt(location_name).decode(),
-            "Coordinates": encrypt(coords).decode(),
-        }
-    )
-    status = res.get("ResponseMetadata", {}).get("HTTPStatusCode")
-    if status != 200:
-        msg = f"Failed to save location '{location_name}', status code {status}"
-        logger.error(msg)
-        raise Exception(msg)
-    return f"Successfully saved location '{location_name}'."
+    if get_location_count(author_id) >= 10:
+        return "Max locations saved for this user. 10 or less allowed."
+    else:
+        table = get_table()
+        location_hash = generate_hash(location_name)
+        res = table.put_item(
+            Item={
+                "Author_ID": str(author_id),
+                "Location": location_hash,
+                "Location_Name": encrypt(location_name).decode(),
+                "Coordinates": encrypt(coords).decode(),
+            }
+        )
+        
+        status = res.get("ResponseMetadata", {}).get("HTTPStatusCode")
+        if status != 200:
+            msg = f"Failed to save location '{location_name}', status code {status}"
+            logger.error(msg)
+            raise Exception(msg)
+                
+        new_count = get_location_count(author_id)
+        if new_count > 10:
+            logger.warning(f"Too many locations for user, deleting most recent.")
+            table.delete_item(
+                Key={
+                    "Author_ID": str(author_id),
+                    "Location": location_hash
+                }
+            )
+            return "Maximum locations saved. Please try again."
+        
+        return f"Successfully saved location '{location_name}'."
+    
+# def save_location(author_id: str, location_name: str, coords: str) -> str:
+#     if(get_location_count(author_id) == 10):
+#         return "Maximum locations saved."
+#     else:
+#         table = get_table()
+#         res = table.put_item(
+#             Item={
+#                 "Author_ID": str(author_id),
+#                 "Location": generate_hash(location_name),
+#                 "Location_Name": encrypt(location_name).decode(),
+#                 "Coordinates": encrypt(coords).decode(),
+#             }
+#         )
+#         status = res.get("ResponseMetadata", {}).get("HTTPStatusCode")
+#         if status != 200:
+#             msg = f"Failed to save location '{location_name}', status code {status}"
+#             logger.error(msg)
+#             raise Exception(msg)
+#         return f"Successfully saved location '{location_name}'."
 
 
 async def save_image_url(author_id: str, location_name: str, message) -> str:
