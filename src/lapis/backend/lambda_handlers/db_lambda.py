@@ -1,8 +1,12 @@
+'''
+TODO: update the structure of this API in the future
+'''
 import json
 import asyncio
 from botocore.exceptions import ClientError
-from oauth import retrieveAccessToken, getUserInfo
+from src.lapis.backend.oauth import retrieveAccessToken, getUserInfo
 from src.lapis.backend.db import *
+
 
 # response object used throughout 
 def response(status_code: int, body: dict | str):
@@ -35,15 +39,18 @@ def handler(event, context):
         # http apis have a different payload format compared to
         #   method = event.get("httpMethod")
         method = event.get("requestContext", {}).get("http", {}).get("method")
+        print(f"Method: {method}")
         # http apis have a different payload format
         # rawPath gets the exact string for /locations excluding the query string ?Author_ID = X
         # fixes issue with getting list_locations
         path = event.get("rawPath") or event.get("pathParameters", "")
+        print(f"Path: {path}")
         query_params = event.get("queryStringParameters") or {}
         body = {}
         if event.get("body"):
             try:
                 body = json.loads(event["body"])
+                print(f"Body: {body}")
             except json.JSONDecodeError:
                 return response(400, {"error": "Invalid JSON body."})
 
@@ -51,7 +58,15 @@ def handler(event, context):
         # Use path parameter if present, fallback to body. 
         location_name = location_name_from_query_param or body.get("location_name")
         # ---------------- POST / PUT ----------------
-        if method in ("POST", "PUT"):
+        if method == "POST":
+            if "authCode" in body and path.endswith("/auth/callback"):
+                authCode = body.get("authCode")
+                print(f"Have auth code {authCode}")
+                accessToken = retrieveAccessToken(authCode)["access_token"]
+                print(f"Have {accessToken}")
+                userInfo = getUserInfo(accessToken)
+                return response(200, userInfo)
+
             author_id = body.get("Author_ID")
             # if not oauth, then we have an issue
             if not author_id and not "authCode" in body:
@@ -59,36 +74,27 @@ def handler(event, context):
 
             if not location_name:
                 return response(400, {"error": "Missing location_name in path or body."})
-
-            if method == "POST":
-                if "authCode" in body and path == "/auth/callback":
-                    authCode = body.get("authCode")
-                    print(f"Have auth code {authCode}")
-                    accessToken = retrieveAccessToken(authCode)
-                    print(f"Have {accessToken}")
-                    userInfo = getUserInfo(accessToken)
-                    return response(200, userInfo)
-                
-                # remember, errors are handled by the specific methods being called.
-                if "coords" in body:
-                    msg = save_location(author_id, location_name, body["coords"])
-                    return response(200, msg)
-                if "message" in body:
-                    msg = asyncio.run(save_image_url(author_id, location_name, body["message"]))
-                    return response(200, msg)
-                if "seed" in body:
-                    success, msg = set_seed(author_id, body["seed"])
-                    return response(200 if success else 400, msg)
+            # remember, errors are handled by the specific methods being called.
+            elif "coords" in body:
+                msg = save_location(author_id, location_name, body["coords"])
+                return response(200, msg)
+            elif "message" in body:
+                msg = asyncio.run(save_image_url(author_id, location_name, body["message"]))
+                return response(200, msg)
+            elif "seed" in body:
+                success, msg = set_seed(author_id, body["seed"])
+                return response(200 if success else 400, msg)
+            else:
                 return response(400, {"error": "POST request missing required fields."})
 
-            if method == "PUT":
-                if "coords" in body:
-                    updated_coords = update_location(author_id, location_name, body["coords"])
-                    return response(200, {"new_coords": updated_coords})
-                return response(400, {"error": "PUT request missing required fields."})
+        elif method == "PUT":
+            if "coords" in body:
+                updated_coords = update_location(author_id, location_name, body["coords"])
+                return response(200, {"new_coords": updated_coords})
+            return response(400, {"error": "PUT request missing required fields."})
 
         # ---------------- GET ----------------
-        if method == "GET":
+        elif method == "GET":
             author_id = query_params.get("Author_ID")
             if not author_id:
                 return response(400, {"error": "Missing required query parameter: Author_ID"})
@@ -109,24 +115,23 @@ def handler(event, context):
             return response(404, {"error": "GET route not found."})
 
         # ---------------- DELETE ----------------
-        location_name = event.get("pathParameters", {}).get("location_name")
-        if method == "DELETE" and location_name:
+        elif method == "DELETE" and location_name:
             author_id = query_params.get("Author_ID")
             if not author_id:
                 return response(400, {"error": "GET/DELETE requests require an Author_ID"})
 
-            if location_name:
+            elif location_name:
                 msg = delete_location(author_id, location_name)
                 return response(200, msg)
 
-            if path.startswith("/images/"):
+            elif path.startswith("/images/"):
                 location_name = path.split("/images/")[1]
                 msg = asyncio.run(delete_image_url(author_id, location_name))
                 return response(200, msg)
-
-            return response(404, {"error": "DELETE route not found."})
-
-        return response(405, {"error": f"Method {method} not allowed."})
+            else:
+                return response(404, {"error": "DELETE route not found."})
+        else:
+            return response(405, {"error": f"Method {method} not allowed."})
 
     except ClientError as e:
         return response(500, {"error": f"AWS ClientError: {e.response['Error']['Message']}"})

@@ -6,7 +6,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 def retrieveAccessToken(authCode: str):
-    oauth_URL = "https://discord.com/api/oauth2/token"
+    oauth_URL = "https://discord.com/api/v10/oauth2/token"
     data = {
         'grant_type': 'authorization_code',
         'code': authCode,
@@ -22,6 +22,9 @@ def retrieveAccessToken(authCode: str):
             headers=headers,
             auth=(os.getenv("CLIENT_ID"), os.getenv("CLIENT_SECRET"))
         )
+        # use response.text for errors
+        # print(response.text)
+        print(response.text)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
@@ -36,6 +39,7 @@ def getUserInfo(accessToken: str):
     }
     try:
         response = requests.get(userDataURL, headers=headers)
+        print("GET USER INFO",response.text)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
