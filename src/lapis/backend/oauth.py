@@ -1,10 +1,13 @@
+'''
+Connects to Discord OAuth API
+'''
 import logging
 import requests
 import os
-
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+# retrieve access token
 def retrieveAccessToken(authCode: str):
     oauth_URL = "https://discord.com/api/v10/oauth2/token"
     data = {
@@ -22,9 +25,6 @@ def retrieveAccessToken(authCode: str):
             headers=headers,
             auth=(os.getenv("CLIENT_ID"), os.getenv("CLIENT_SECRET"))
         )
-        # use response.text for errors
-        # print(response.text)
-        print(response.text)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
@@ -32,14 +32,14 @@ def retrieveAccessToken(authCode: str):
         raise  # rethrow so the Lambda invocation fails visibly
 
 
-def getUserInfo(accessToken: str):
+# get the author_ID here
+def getAuthorIDFromDiscord(accessToken: str):
     userDataURL = "https://discord.com/api/users/@me"
     headers = {
         "Authorization": f"Bearer {accessToken}"
     }
     try:
         response = requests.get(userDataURL, headers=headers)
-        print("GET USER INFO",response.text)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:

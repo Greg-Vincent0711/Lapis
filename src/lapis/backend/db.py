@@ -19,8 +19,6 @@ def get_table():
     table = db_instance.Table(os.getenv('TABLE_NAME'))
     return table
 
-# TODO - Implement some sort of caching in the future
-# since this is a small app rn not necessary but better to have
 def get_location_count(author_id: str):
     # Get table
     table = get_table()
@@ -31,6 +29,38 @@ def get_location_count(author_id: str):
     )    
     return response['Count']
 
+
+def get_credentials(cognito_user_id: str):
+    table = get_table()
+    response = table.query(
+        IndexName='cognito-index',
+        KeyConditionExpression=Key('cognito_user_id').eq(cognito_user_id)
+    )    
+    if response['Items']:
+        return response['Items'][0]['Author_ID']
+    return None
+
+# connect cognito user to discord oauth
+def save_credentials(cognito_user_id: str, author_id: str):
+    table = get_table()    
+    existing_author_id = verify_credentials(cognito_user_id)
+    if existing_author_id is None:
+        table.put_item(
+            Item={
+                'Author_ID': author_id,
+                'cognito_user_id': cognito_user_id
+            }
+        )
+        return True
+    else:
+        if existing_author_id != author_id:
+            table.update_item(
+                Key={'Author_ID': existing_author_id},
+                UpdateExpression='SET cognito_user_id = :cid',
+                ExpressionAttributeValues={':cid': cognito_user_id}
+            )
+        return False
+    
 # ---------------- POST / PUT METHODS ----------------
 def save_location(author_id: str, location_name: str, coords: str) -> str:
     if get_location_count(author_id) >= 10:
@@ -66,27 +96,6 @@ def save_location(author_id: str, location_name: str, coords: str) -> str:
         
         return f"Successfully saved location '{location_name}'."
     
-# def save_location(author_id: str, location_name: str, coords: str) -> str:
-#     if(get_location_count(author_id) == 10):
-#         return "Maximum locations saved."
-#     else:
-#         table = get_table()
-#         res = table.put_item(
-#             Item={
-#                 "Author_ID": str(author_id),
-#                 "Location": generate_hash(location_name),
-#                 "Location_Name": encrypt(location_name).decode(),
-#                 "Coordinates": encrypt(coords).decode(),
-#             }
-#         )
-#         status = res.get("ResponseMetadata", {}).get("HTTPStatusCode")
-#         if status != 200:
-#             msg = f"Failed to save location '{location_name}', status code {status}"
-#             logger.error(msg)
-#             raise Exception(msg)
-#         return f"Successfully saved location '{location_name}'."
-
-
 async def save_image_url(author_id: str, location_name: str, message) -> str:
     table = get_table()
     image_url = await storeImageInS3(message)

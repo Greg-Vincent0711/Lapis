@@ -1,10 +1,10 @@
 '''
-TODO: update the structure of this API in the future
+TODO - update the structure of this API in the future...it works but isn't good lol
 '''
 import json
 import asyncio
 from botocore.exceptions import ClientError
-from src.lapis.backend.oauth import retrieveAccessToken, getUserInfo
+from src.lapis.backend.oauth import retrieveAccessToken, getAuthorIDFromDiscord
 from src.lapis.backend.db import *
 
 
@@ -36,21 +36,19 @@ def extract_location_name(path: str) -> str | None:
 
 def handler(event, context):
     try:
-        # http apis have a different payload format compared to
-        #   method = event.get("httpMethod")
         method = event.get("requestContext", {}).get("http", {}).get("method")
-        print(f"Method: {method}")
         # http apis have a different payload format
         # rawPath gets the exact string for /locations excluding the query string ?Author_ID = X
         # fixes issue with getting list_locations
         path = event.get("rawPath") or event.get("pathParameters", "")
-        print(f"Path: {path}")
         query_params = event.get("queryStringParameters") or {}
+        # Get cognito_user_id from JWT (decoded by API Gateway)
+        cognito_user_id = event.get("requestContext", {}).get("authorizer", {}).get("jwt", {}).get("claims", {}).get("sub")
+        author_ID = get_credentials(cognito_user_id)
         body = {}
         if event.get("body"):
             try:
                 body = json.loads(event["body"])
-                print(f"Body: {body}")
             except json.JSONDecodeError:
                 return response(400, {"error": "Invalid JSON body."})
 
@@ -61,72 +59,69 @@ def handler(event, context):
         if method == "POST":
             if "authCode" in body and path.endswith("/auth/callback"):
                 authCode = body.get("authCode")
-                print(f"Have auth code {authCode}")
                 accessToken = retrieveAccessToken(authCode)["access_token"]
-                print(f"Have {accessToken}")
-                userInfo = getUserInfo(accessToken)
-                return response(200, userInfo)
+                authorID = getAuthorIDFromDiscord(accessToken)
+                save_credentials(cognito_user_id, authorID)
+                # save this and the jwt to the db/check if it exists already in db.py
+                return response(200, "Saved Credentials")
 
-            author_id = body.get("Author_ID")
             # if not oauth, then we have an issue
-            if not author_id and not "authCode" in body:
+            if not author_ID:
                 return response(400, {"error": "Missing required field: Author_ID"})
 
             if not location_name:
                 return response(400, {"error": "Missing location_name in path or body."})
             # remember, errors are handled by the specific methods being called.
             elif "coords" in body:
-                msg = save_location(author_id, location_name, body["coords"])
+                msg = save_location(author_ID, location_name, body["coords"])
                 return response(200, msg)
             elif "message" in body:
-                msg = asyncio.run(save_image_url(author_id, location_name, body["message"]))
+                msg = asyncio.run(save_image_url(author_ID, location_name, body["message"]))
                 return response(200, msg)
             elif "seed" in body:
-                success, msg = set_seed(author_id, body["seed"])
+                success, msg = set_seed(author_ID, body["seed"])
                 return response(200 if success else 400, msg)
             else:
                 return response(400, {"error": "POST request missing required fields."})
 
         elif method == "PUT":
             if "coords" in body:
-                updated_coords = update_location(author_id, location_name, body["coords"])
+                updated_coords = update_location(author_ID, location_name, body["coords"])
                 return response(200, {"new_coords": updated_coords})
             return response(400, {"error": "PUT request missing required fields."})
 
         # ---------------- GET ----------------
         elif method == "GET":
-            author_id = query_params.get("Author_ID")
-            if not author_id:
+            if not author_ID:
                 return response(400, {"error": "Missing required query parameter: Author_ID"})
 
             if location_name:
-                result = get_location(author_id, location_name)
+                result = get_location(author_ID, location_name)
                 return response(200, {"location": result})
 
             # Strictly "locations" refers to list_locations
             if path.split("/", 2)[-1] == "locations":
-                locations = list_locations(author_id)
+                locations = list_locations(author_ID)
                 return response(200, {"locations": locations})
 
             if path == "/seed":
-                seed = get_seed(author_id)
+                seed = get_seed(author_ID)
                 return response(200, {"seed": seed})
 
             return response(404, {"error": "GET route not found."})
 
         # ---------------- DELETE ----------------
         elif method == "DELETE" and location_name:
-            author_id = query_params.get("Author_ID")
-            if not author_id:
+            if not author_ID:
                 return response(400, {"error": "GET/DELETE requests require an Author_ID"})
 
             elif location_name:
-                msg = delete_location(author_id, location_name)
+                msg = delete_location(author_ID, location_name)
                 return response(200, msg)
 
             elif path.startswith("/images/"):
                 location_name = path.split("/images/")[1]
-                msg = asyncio.run(delete_image_url(author_id, location_name))
+                msg = asyncio.run(delete_image_url(author_ID, location_name))
                 return response(200, msg)
             else:
                 return response(404, {"error": "DELETE route not found."})
