@@ -19,8 +19,6 @@ def response(status_code: int, body: dict | str):
         "body": json.dumps(body if isinstance(body, dict) else {"message": body}),
     }
 
-
-
 def extract_location_name(path: str) -> str | None:
     """Extract the {location} from /locations/{location} path. from query parameter"""
     if isinstance(path, str):
@@ -33,7 +31,10 @@ def extract_location_name(path: str) -> str | None:
         else:
             return None
 
-
+'''
+Instead of passing the author_ID around(not secure), we now rely on the 
+cognito_user_id implicitly when the user signs into the app
+'''
 def handler(event, context):
     try:
         method = event.get("requestContext", {}).get("http", {}).get("method")
@@ -41,7 +42,6 @@ def handler(event, context):
         # rawPath gets the exact string for /locations excluding the query string ?Author_ID = X
         # fixes issue with getting list_locations
         path = event.get("rawPath") or event.get("pathParameters", "")
-        query_params = event.get("queryStringParameters") or {}
         # Get cognito_user_id from JWT (decoded by API Gateway)
         cognito_user_id = event.get("requestContext", {}).get("authorizer", {}).get("jwt", {}).get("claims", {}).get("sub")
         author_ID = get_credentials(cognito_user_id)
@@ -61,11 +61,9 @@ def handler(event, context):
                 authCode = body.get("authCode")
                 accessToken = retrieveAccessToken(authCode)["access_token"]
                 authorID = getAuthorIDFromDiscord(accessToken)
-                save_credentials(cognito_user_id, authorID)
-                # save this and the jwt to the db/check if it exists already in db.py
-                return response(200, "Saved Credentials")
+                statusCode, msg = save_credentials(cognito_user_id, authorID)
+                return response(statusCode, msg)
 
-            # if not oauth, then we have an issue
             if not author_ID:
                 return response(400, {"error": "Missing required field: Author_ID"})
 

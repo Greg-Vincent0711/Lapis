@@ -29,37 +29,55 @@ def get_location_count(author_id: str):
     )    
     return response['Count']
 
-
 def get_credentials(cognito_user_id: str):
-    table = get_table()
-    response = table.query(
-        IndexName='cognito-index',
-        KeyConditionExpression=Key('cognito_user_id').eq(cognito_user_id)
-    )    
-    if response['Items']:
-        return response['Items'][0]['Author_ID']
-    return None
-
-# connect cognito user to discord oauth
-def save_credentials(cognito_user_id: str, author_id: str):
-    table = get_table()    
-    existing_author_id = verify_credentials(cognito_user_id)
-    if existing_author_id is None:
-        table.put_item(
-            Item={
-                'Author_ID': author_id,
-                'cognito_user_id': cognito_user_id
-            }
+    try:
+        table = get_table()
+        response = table.query(
+            IndexName='cognito-index',
+            KeyConditionExpression=Key('cognito_user_id').eq(cognito_user_id)
         )
-        return True
-    else:
-        if existing_author_id != author_id:
-            table.update_item(
-                Key={'Author_ID': existing_author_id},
-                UpdateExpression='SET cognito_user_id = :cid',
-                ExpressionAttributeValues={':cid': cognito_user_id}
+        
+        if response['Items']:
+            return response['Items'][0]['Author_ID']
+        return None
+        
+    except ClientError as e:
+        print(f"DynamoDB error in get_credentials: {e.response['Error']['Message']}")
+        raise Exception("Failed to retrieve credentials from database")
+    except Exception as e:
+        print(f"Unexpected error in get_credentials: {str(e)}")
+        raise Exception("Failed to retrieve credentials")
+
+
+def save_credentials(cognito_user_id: str, author_id: str):
+    try:
+        table = get_table()
+        existing_author_id = get_credentials(cognito_user_id)
+        
+        if existing_author_id is None:
+            table.put_item(
+                Item={
+                    'Author_ID': author_id,
+                    'cognito_user_id': cognito_user_id
+                }
             )
-        return False
+            return 200, "Credentials saved successfully."
+        else:
+            if existing_author_id != author_id:
+                table.update_item(
+                    Key={'Author_ID': existing_author_id},
+                    UpdateExpression='SET cognito_user_id = :cid',
+                    ExpressionAttributeValues={':cid': cognito_user_id}
+                )
+                return 200, "Credentials updated successfully."
+            return 200, "Credentials already exist."
+            
+    except ClientError as e:
+        print(f"DynamoDB error in save_credentials: {e.response['Error']['Message']}")
+        return 500, "Failed to save credentials to database"
+    except Exception as e:
+        print(f"Unexpected error in save_credentials: {str(e)}")
+        return 500, "Failed to save credentials"
     
 # ---------------- POST / PUT METHODS ----------------
 def save_location(author_id: str, location_name: str, coords: str) -> str:
