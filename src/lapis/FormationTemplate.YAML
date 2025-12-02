@@ -36,11 +36,20 @@ Resources:
           AttributeType: S
         - AttributeName: Location
           AttributeType: S
+        - AttributeName: cognito_user_id 
+          AttributeType: S
       KeySchema:
         - AttributeName: Author_ID
           KeyType: HASH
         - AttributeName: Location
           KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: cognito-index
+          KeySchema:
+            - AttributeName: cognito_user_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
 
   # Lambda Roles
@@ -75,7 +84,9 @@ Resources:
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
                   - dynamodb:Query
-                Resource: !GetAtt LapisTable.Arn
+                Resource: 
+                  - !GetAtt LapisTable.Arn
+                  - !Sub "${LapisTable.Arn}/index/*"
               - Effect: Allow
                 Action:
                   - s3:PutObject

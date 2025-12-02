@@ -49,7 +49,7 @@ def get_credentials(cognito_user_id: str):
         raise Exception("Failed to retrieve credentials")
 
 
-def save_credentials(cognito_user_id: str, author_id: str):
+def verify_credentials(cognito_user_id: str, author_id: str):
     try:
         table = get_table()
         existing_author_id = get_credentials(cognito_user_id)
@@ -58,25 +58,19 @@ def save_credentials(cognito_user_id: str, author_id: str):
             table.put_item(
                 Item={
                     'Author_ID': author_id,
+                    'Location': generate_hash("__PROFILE__"),
                     'cognito_user_id': cognito_user_id
                 }
             )
             return 200, "Credentials saved successfully."
         else:
-            if existing_author_id != author_id:
-                table.update_item(
-                    Key={'Author_ID': existing_author_id},
-                    UpdateExpression='SET cognito_user_id = :cid',
-                    ExpressionAttributeValues={':cid': cognito_user_id}
-                )
-                return 200, "Credentials updated successfully."
-            return 200, "Credentials already exist."
+            return 200, "Credentials exist already. You're good to go."
             
     except ClientError as e:
-        print(f"DynamoDB error in save_credentials: {e.response['Error']['Message']}")
+        print(f"DynamoDB error in verify_credentials: {e.response['Error']['Message']}")
         return 500, "Failed to save credentials to database"
     except Exception as e:
-        print(f"Unexpected error in save_credentials: {str(e)}")
+        print(f"Unexpected error in verify_credentials: {str(e)}")
         return 500, "Failed to save credentials"
     
 # ---------------- POST / PUT METHODS ----------------

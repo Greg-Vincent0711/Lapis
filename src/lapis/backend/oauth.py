@@ -33,7 +33,7 @@ def retrieveAccessToken(authCode: str):
 
 
 # get the author_ID here
-def getAuthorIDFromDiscord(accessToken: str):
+def getAuthorDataFromDiscord(accessToken: str):
     userDataURL = "https://discord.com/api/users/@me"
     headers = {
         "Authorization": f"Bearer {accessToken}"
@@ -41,6 +41,7 @@ def getAuthorIDFromDiscord(accessToken: str):
     try:
         response = requests.get(userDataURL, headers=headers)
         response.raise_for_status()
+        print(response.json())
         return response.json()
     except requests.exceptions.RequestException as e:
         logger.error(f"Discord user info retrieval failed: {e}", exc_info=True)

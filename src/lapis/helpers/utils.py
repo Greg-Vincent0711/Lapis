@@ -1,5 +1,5 @@
 import re
-from src.lapis.encryption.encryption import decrypt
+from src.lapis.encryption.encryption import decrypt, generate_hash
 from src.lapis.helpers.features import *
 import hashlib
 import struct
@@ -34,8 +34,15 @@ def isCorrectCoordFormat(coordinates: str) -> str | bool:
 
 def extract_decrypted_locations(encryptedData):
     decryptedLocations = []
+    profile_hash = generate_hash("__PROFILE__")
     for entry in encryptedData:
         try:
+            # Skip profile item
+            if entry.get('Location') == profile_hash:
+                continue
+            # Skip items without Location_Name (profile items)
+            if 'Location_Name' not in entry or 'Coordinates' not in entry:
+                continue
             decrypted_entry = {
                 'Location_Name': decrypt(entry['Location_Name']).decode(),
                 'Coordinates': decrypt(entry['Coordinates']).decode()
