@@ -1,5 +1,6 @@
 '''
 TODO - update the structure of this API in the future...it works but isn't good lol
+     - huge refactor coming soon
 '''
 import json
 import asyncio
@@ -41,11 +42,9 @@ def handler(event, context):
         # http apis have a different payload format
         # rawPath gets the exact string for /locations excluding the query string ?Author_ID = X
         # fixes issue with getting list_locations
-        print(event)
         path = event.get("rawPath") or event.get("pathParameters", "")
         # Get cognito_user_id from JWT (decoded by API Gateway)
         cognito_user_id = event.get("requestContext", {}).get("authorizer", {}).get("jwt", {}).get("claims", {}).get("sub")
-        print(cognito_user_id)
         author_ID = get_credentials(cognito_user_id)
         body = {}
         if event.get("body"):
@@ -63,7 +62,6 @@ def handler(event, context):
                 authCode = body.get("authCode")
                 accessToken = retrieveAccessToken(authCode)["access_token"]
                 newAuthorID = getAuthorDataFromDiscord(accessToken)["id"]
-                print(f"newAuthorID: {author_ID}, cognito_user: {cognito_user_id}")
                 statusCode, msg = verify_credentials(cognito_user_id, newAuthorID)
                 return response(statusCode, msg)
 
