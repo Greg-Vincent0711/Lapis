@@ -1,6 +1,6 @@
 '''
 TODO - update the structure of this API in the future...it works but isn't good lol
-     - huge refactor coming soon
+     - and now we refactor
 '''
 import json
 import asyncio
@@ -60,10 +60,12 @@ def handler(event, context):
         if method == "POST":
             if "authCode" in body and path.endswith("/auth/callback"):
                 authCode = body.get("authCode")
+            ## CHANGE TO MIDDLEWARE ##
                 accessToken = retrieveAccessToken(authCode)["access_token"]
                 newAuthorID = getAuthorDataFromDiscord(accessToken)["id"]
                 statusCode, msg = verify_credentials(cognito_user_id, newAuthorID)
                 return response(statusCode, msg)
+            ## 
 
             if not author_ID:
                 return response(400, {"error": "Missing required field: Author_ID"})
@@ -72,12 +74,15 @@ def handler(event, context):
                 return response(400, {"error": "Missing location_name in path or body."})
             # remember, errors are handled by the specific methods being called.
             elif "coords" in body:
+                # MIDDLEWARE - Business Logic
                 msg = save_location(author_ID, location_name, body["coords"])
                 return response(200, msg)
             elif "message" in body:
+                # MIDDLEWARE - Business Logic
                 msg = asyncio.run(save_image_url(author_ID, location_name, body["message"]))
                 return response(200, msg)
             elif "seed" in body:
+                # MIDDLEWARE - Business Logic
                 success, msg = set_seed(author_ID, body["seed"])
                 return response(200 if success else 400, msg)
             else:
@@ -85,6 +90,7 @@ def handler(event, context):
 
         elif method == "PUT":
             if "coords" in body:
+                # MIDDLEWARE - Business Logic
                 updated_coords = update_location(author_ID, location_name, body["coords"])
                 return response(200, {"new_coords": updated_coords})
             return response(400, {"error": "PUT request missing required fields."})
