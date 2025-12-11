@@ -1,5 +1,5 @@
 # api/middleware/errors.py
-from api.models.response import APIResponse
+from api.models.http_models import APIResponse
 
 class APIError(Exception):
     """Base class for API errors"""
@@ -37,5 +37,4 @@ def error_handler_middleware(handler):
             import traceback
             traceback.print_exc()
             return APIResponse(500, {"error": "Internal server error"}).to_lambda_response()
-    
     return wrapper

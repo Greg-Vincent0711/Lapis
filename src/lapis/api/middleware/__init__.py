@@ -1,0 +1,1 @@
+# Middleware used before an HTTP response happens on presentation layer
