@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch
-from src.lapis.backend.seed_impl import spawn_near_impl
+from src.lapis.api.seed_impl import spawn_near_impl
 from testing_utils import mock_interaction_spn
 
 # autospec makes it so that connectToInputHandler mock has the same signature as the actual fn

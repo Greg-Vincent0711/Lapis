@@ -10,9 +10,9 @@ from src.lapis.helpers.docstrings import *
 from src.lapis.helpers.exceptions import *
 from src.lapis.helpers.embed import *
 from src.lapis.helpers.paginator import *
-from src.lapis.backend.db import *
+from src.lapis.api.repositories.db import *
 # from src.lapis.backend.cache import *
-from src.lapis.backend.seed_impl import *
+from src.lapis.api.seed_impl import *
 from src.lapis.helpers.features import *
 
 from dotenv import load_dotenv

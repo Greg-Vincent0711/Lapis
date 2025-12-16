@@ -4,14 +4,16 @@ import json
 
 # dataclass decorator auto generates double underscore boilerplate methods
 # __init__, __repr__, __eq__, for ex
-@dataclass
+NotImplementedError@dataclass
 class APIRequest:
     method: str
     path: str
     body: Dict[str, Any]
     path_params: Dict[str, str]
+    query_params: Optional[Dict[str, str]]
     cognito_user_id: Optional[str] = None
     author_id: Optional[str] = None
+    
     
     # decorator means: we don't need to call self to use this method
     @classmethod

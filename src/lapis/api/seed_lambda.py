@@ -1,6 +1,6 @@
 # Refactor this as well
 import json
-from src.lapis.backend.seed_impl import *
+from src.lapis.api.seed_impl import *
 
 def response(status_code: int, body: dict):
     """

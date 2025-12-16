@@ -1,7 +1,7 @@
 import subprocess
 import json
 import os
-from src.lapis.backend.db import get_seed
+from src.lapis.api.repositories.db import get_seed
 from src.lapis.helpers.features import *
 
 def connectToInputHandler(author_id: str, args: list[str]) -> dict:

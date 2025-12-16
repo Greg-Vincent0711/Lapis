@@ -1,12 +1,12 @@
 import boto3
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
-from src.lapis.backend.s3_fns import storeImageInS3, deleteImage
+from src.lapis.api.repositories.s3_fns import storeImageInS3, deleteImage
 from src.lapis.encryption.encryption import encrypt, decrypt, generate_hash
 from src.lapis.helpers.utils import extract_decrypted_locations
 import os
 import logging
-
+# TODO - all fns here should return a status code, msg to their handlers so it can be passed through
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 MAX = 10
@@ -107,7 +107,10 @@ def save_location(author_id: str, location_name: str, coords: str) -> str:
             return "Maximum locations saved. Please try again."
         
         return f"Successfully saved location '{location_name}'."
-    
+
+# you could have errors bubble up - this returns {status code, msg}
+# then, just pass that to the api caller through the handler
+# so you may want to change return type of this
 async def save_image_url(author_id: str, location_name: str, message) -> str:
     table = get_table()
     image_url = await storeImageInS3(message)
@@ -279,6 +282,7 @@ async def delete_image_url(author_id: str, location_name: str) -> str:
         )
         if "Attributes" in res and "Image_URL" in res["Attributes"]:
             delete_url = decrypt(res['Attributes']['Image_URL']).decode()
+            # two fold operation - delete the generated url AND the image data itself
             await deleteImage(delete_url)
             return f"Deleted image URL for location '{location_name}'."
         else:

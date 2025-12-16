@@ -1,6 +1,6 @@
 from typing import Optional
 from src.lapis.helpers.utils import *
-from src.lapis.backend.subprocess import connectToInputHandler
+from src.lapis.api.subprocess import connectToInputHandler
 from src.lapis.helpers.features import *
 
 def nearest_impl(author_id: str, feature: str, x_coord: str, z_coord: str, radius: str):

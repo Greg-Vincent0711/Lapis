@@ -35,7 +35,7 @@ class Router:
         for (method, path_pattern), handler in self.routes.items():
             # Check if HTTP method matches AND path pattern matches
             # ex: method="GET" and path_pattern="/users/{id}" matches request path "/users/123"
-            if method == request.method and self.isAMatch(path_pattern, request.path):
+            if method == request.method and self.pathPatternsMatch(path_pattern, request.path):
                 return handler(request)
         
         return APIResponse(404, {"error": "Route not found"})
@@ -45,7 +45,7 @@ class Router:
         specificPath is a APIRequest defined portion. 
         The user may send something like POST /helpme/{id} for ex which is not valid
     '''
-    def isAMatch(self, routePattern: str, specificPath: str) -> bool:
+    def pathPatternsMatch(self, routePattern: str, specificPath: str) -> bool:
         route_segments = routePattern.split("/")
         specific_path_segments = specificPath.split("/")
         
@@ -64,5 +64,4 @@ class Router:
             # Example: "users" must equal "users"
             if route_segment != specific_path_segment:
                 return False
-        
         return True

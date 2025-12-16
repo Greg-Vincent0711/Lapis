@@ -5,8 +5,8 @@ TODO - update the structure of this API in the future...it works but isn't good 
 import json
 import asyncio
 from botocore.exceptions import ClientError
-from src.lapis.backend.oauth import retrieveAccessToken, getAuthorDataFromDiscord
-from src.lapis.backend.db import *
+from src.lapis.api.repositories.oauth import retrieveAccessToken, getAuthorDataFromDiscord
+from src.lapis.api.repositories.db import *
 
 
 # response object used throughout 
@@ -20,6 +20,7 @@ def response(status_code: int, body: dict | str):
         "body": json.dumps(body if isinstance(body, dict) else {"message": body}),
     }
 
+# presentation layer
 def extract_location_name(path: str) -> str | None:
     """Extract the {location} from /locations/{location} path. from query parameter"""
     if isinstance(path, str):
