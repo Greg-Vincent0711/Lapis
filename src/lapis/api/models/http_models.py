@@ -1,10 +1,9 @@
-from dataclasses import dataclass
 from typing import Any, Dict, Optional
 import json
 
 # dataclass decorator auto generates double underscore boilerplate methods
 # __init__, __repr__, __eq__, for ex
-NotImplementedError@dataclass
+# NotImplementedError@dataclass
 class APIRequest:
     method: str
     path: str
@@ -16,14 +15,14 @@ class APIRequest:
     
     
     # decorator means: we don't need to call self to use this method
+    # cls refers to the class itself as a parameter. this is a factory method which is why we use classmethod here
+    # entry point function of this api. See db_handler.py for more info
     @classmethod
-    # cls refers to the class itself as a parameter
     def from_lambda_event(cls, event: dict) -> 'APIRequest':
-        """Parse Lambda HTTP API event into clean request object"""
+        """Parse Lambda event"""
         method = event.get("requestContext", {}).get("http", {}).get("method", "")
         path = event.get("rawPath", "")
         
-        # Parse body
         body = {}
         if event.get("body"):
             try:
@@ -31,12 +30,11 @@ class APIRequest:
             except json.JSONDecodeError:
                 body = {}
         
-        # Extract path parameters (you'll improve this later)
+        # improve this later
         path_params = {}
         if path.startswith("/locations/") and len(path.split("/")) >= 3:
             path_params['location_name'] = path.split("/")[2]
         
-        # Extract cognito ID
         cognito_user_id = (
             event.get("requestContext", {})
             .get("authorizer", {})
