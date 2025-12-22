@@ -2,11 +2,13 @@ import boto3
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 from src.lapis.api.repositories.s3_fns import storeImageInS3, deleteImage
-from src.lapis.encryption.encryption import encrypt, decrypt, generate_hash
+from src.lapis.api.services.encryption.encryption import encrypt, decrypt, generate_hash
 from src.lapis.helpers.utils import extract_decrypted_locations
+from src.lapis.api.middleware.errors import *
 import os
 import logging
-# TODO - all fns here should return a status code, msg to their handlers so it can be passed through
+# TODO - functions here need to be refactored to truly act as data access only
+# There isn't a good separation of concerns here
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 MAX = 10
@@ -26,7 +28,7 @@ def get_location_count(author_id: str):
     response = table.query(
         KeyConditionExpression=Key('Author_ID').eq(author_id),
         Select='COUNT'
-    )    
+    )
     return response['Count']
 
 def get_credentials(cognito_user_id: str):
@@ -36,10 +38,10 @@ def get_credentials(cognito_user_id: str):
             IndexName='cognito-index',
             KeyConditionExpression=Key('cognito_user_id').eq(cognito_user_id)
         )
-        
+        status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
         if response['Items']:
-            return response['Items'][0]['Author_ID']
-        return None
+            return status, response['Items'][0]['Author_ID']
+        return status, "Could not retrieve credentials for user."
         
     except ClientError as e:
         print(f"DynamoDB error in get_credentials: {e.response['Error']['Message']}")
@@ -74,13 +76,11 @@ def verify_credentials(cognito_user_id: str, author_id: str):
         return 500, "Failed to save credentials"
     
 # ---------------- POST / PUT METHODS ----------------
-def save_location(author_id: str, location_name: str, coords: str) -> str:
-    if get_location_count(author_id) >= 10:
-        return "Max locations saved for this user. 10 or less allowed."
-    else:
-        table = get_table()
+def save_location(author_id: str, location_name: str, coords: str) -> None:
+    table = get_table()
+    try:
         location_hash = generate_hash(location_name)
-        res = table.put_item(
+        table.put_item(
             Item={
                 "Author_ID": str(author_id),
                 "Location": location_hash,
@@ -88,33 +88,19 @@ def save_location(author_id: str, location_name: str, coords: str) -> str:
                 "Coordinates": encrypt(coords).decode(),
             }
         )
-        
-        status = res.get("ResponseMetadata", {}).get("HTTPStatusCode")
-        if status != 200:
-            msg = f"Failed to save location '{location_name}', status code {status}"
-            logger.error(msg)
-            raise Exception(msg)
-                
-        new_count = get_location_count(author_id)
-        if new_count > 10:
-            logger.warning(f"Too many locations for user, deleting most recent.")
-            table.delete_item(
-                Key={
-                    "Author_ID": str(author_id),
-                    "Location": location_hash
-                }
-            )
-            return "Maximum locations saved. Please try again."
-        
-        return f"Successfully saved location '{location_name}'."
+
+    except ClientError as e:
+        logger.error(f"Failed to save location: {e}")
+        raise DataAccessError("Failed to save location") from e
+
 
 # you could have errors bubble up - this returns {status code, msg}
 # then, just pass that to the api caller through the handler
 # so you may want to change return type of this
+
 async def save_image_url(author_id: str, location_name: str, message) -> str:
     table = get_table()
     image_url = await storeImageInS3(message)
-
     try:
         res = table.update_item(
             Key={
@@ -127,15 +113,10 @@ async def save_image_url(author_id: str, location_name: str, message) -> str:
             },
             ReturnValues="UPDATED_NEW",
         )
-        if "Attributes" in res:
-            return f"Saved image URL for location '{location_name}'."
-        else:
-            msg = f"Failed to update image URL for location '{location_name}'."
-            logger.error(msg)
-            raise Exception(msg)
+        return res
     except ClientError as e:
         logger.error(f"DynamoDB ClientError: {e}")
-        raise
+        raise DataAccessError("Failed to url for image") from e
 
 
 def set_seed(author_id: str, seed: str) -> tuple[bool, str]:
@@ -152,15 +133,10 @@ def set_seed(author_id: str, seed: str) -> tuple[bool, str]:
             },
             ReturnValues="UPDATED_NEW",
         )
-        if res.get("Attributes", {}).get("World_Seed"):
-            return True, "Successfully set world seed."
-        else:
-            msg = "Failed to set world seed."
-            logger.error(msg)
-            return False, msg
+        return res
     except ClientError as e:
         logger.error(f"DynamoDB ClientError while setting seed: {e}")
-        raise
+        raise DataAccessError("ClientError while setting seed. Try again.") from e
 
 
 def update_location(author_id: str, location_name: str, new_coords: str) -> str:
@@ -178,15 +154,10 @@ def update_location(author_id: str, location_name: str, new_coords: str) -> str:
             ReturnValues="UPDATED_NEW",
             ConditionExpression="attribute_exists(Coordinates)"
         )
-        if "Attributes" in res:
-            return decrypt(res['Attributes']['Coordinates']).decode()
-        else:
-            msg = f"Location '{location_name}' not found or update failed."
-            logger.error(msg)
-            raise Exception(msg)
+        return res
     except ClientError as e:
         logger.error(f"DynamoDB ClientError while updating location: {e}")
-        raise
+        raise DataAccessError("ClientError while updating location. Try again.")
 
 
 # ---------------- GET METHODS ----------------
@@ -199,20 +170,10 @@ def get_location(author_id: str, location_name: str) -> dict:
                 "Location": generate_hash(location_name)
             }
         )
-        if 'Item' not in res:
-            raise Exception(f"Location '{location_name}' not found.")
-
-        item = res['Item']
-        decrypted_coords = decrypt(item['Coordinates'].encode()).decode()
-        result = {"Coordinates": decrypted_coords}
-
-        if item.get("Image_URL"):
-            result["Image_URL"] = decrypt(item["Image_URL"].encode()).decode()
-
-        return result
+        return res
     except ClientError as e:
         logger.error(f"DynamoDB ClientError while fetching location: {e}")
-        raise
+        raise DataAccessError("ClientError while fetching location. Try again.")
 
 
 def get_seed(author_id: str) -> str:
@@ -224,27 +185,22 @@ def get_seed(author_id: str) -> str:
                 "Location": "SEED"
             }
         )
-        if 'Item' not in res or 'World_Seed' not in res['Item']:
-            raise Exception("World seed not found.")
-
-        return decrypt(res['Item']['World_Seed'].encode()).decode()
+        return res
     except ClientError as e:
         logger.error(f"DynamoDB ClientError while fetching seed: {e}")
-        raise
+        raise DataAccessError("DynamoDB ClientError while fetching seed")
 
 
 def list_locations(author_id: str) -> list[dict]:
     table = get_table()
     try:
-        response = table.query(
+        res = table.query(
             KeyConditionExpression=boto3.dynamodb.conditions.Key("Author_ID").eq(str(author_id))
         )
-        encrypted_locations = response.get('Items', [])
-        unencrypted_locations = extract_decrypted_locations(encrypted_locations)
-        return unencrypted_locations
+        return res
     except ClientError as e:
         logger.error(f"DynamoDB ClientError while listing locations: {e}")
-        raise
+        raise DataAccessError("DynamoDB ClientError while fetching your locations")
 
 
 # ---------------- DELETE METHODS ----------------
@@ -258,15 +214,10 @@ def delete_location(author_id: str, location_name: str) -> str:
             },
             ReturnValues="ALL_OLD"
         )
-        if "Attributes" in res:
-            return f"Successfully deleted location '{location_name}'."
-        else:
-            msg = f"Location '{location_name}' not found."
-            logger.error(msg)
-            raise Exception(msg)
+        return res
     except ClientError as e:
         logger.error(f"DynamoDB ClientError while deleting location: {e}")
-        raise
+        raise DataAccessError(f"DynamoDB ClientError while deleting location: {e}")
 
 
 async def delete_image_url(author_id: str, location_name: str) -> str:
@@ -280,15 +231,45 @@ async def delete_image_url(author_id: str, location_name: str) -> str:
             UpdateExpression="REMOVE Image_URL",
             ReturnValues="ALL_OLD"
         )
-        if "Attributes" in res and "Image_URL" in res["Attributes"]:
-            delete_url = decrypt(res['Attributes']['Image_URL']).decode()
-            # two fold operation - delete the generated url AND the image data itself
-            await deleteImage(delete_url)
-            return f"Deleted image URL for location '{location_name}'."
-        else:
-            msg = f"No image found for location '{location_name}'."
-            logger.error(msg)
-            raise Exception(msg)
+        return res
     except ClientError as e:
         logger.error(f"DynamoDB ClientError while deleting image: {e}")
-        raise
+        raise DataAccessError(f"DynamoDB ClientError while deleting an image URL: {e}")
+
+
+
+# def save_location(author_id: str, location_name: str, coords: str) -> str:
+#     if get_location_count(author_id) >= 10:
+#         return "Max locations saved for this user. 10 or less allowed."
+#     else:
+#         table = get_table()
+#         location_hash = generate_hash(location_name)
+#         res = table.put_item(
+#             Item={
+#                 "Author_ID": str(author_id),
+#                 "Location": location_hash,
+#                 "Location_Name": encrypt(location_name).decode(),
+#                 "Coordinates": encrypt(coords).decode(),
+#             }
+#         )
+        
+#         status = res.get("ResponseMetadata", {}).get("HTTPStatusCode")
+#         if status != 200:
+#             msg = f"Failed to save location '{location_name}', status code {status}"
+#             logger.error(msg)
+#             return status, msg
+                
+#         new_count = get_location_count(author_id)
+#         if new_count > 10:
+#             logger.warning(f"Too many locations for user, deleting most recent.")
+#             table.delete_item(
+#                 Key={
+#                     "Author_ID": str(author_id),
+#                     "Location": location_hash
+#                 }
+#             )
+#             return 202, "Request is accepted - Max locations saved however."
+        
+#         return 200, f"Successfully saved location '{location_name}'."
+# repositories/location_repository.py
+

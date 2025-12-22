@@ -1,5 +1,5 @@
 import re
-from src.lapis.encryption.encryption import decrypt, generate_hash
+from src.lapis.api.services.encryption.encryption import decrypt, generate_hash
 from src.lapis.helpers.features import *
 import hashlib
 import struct

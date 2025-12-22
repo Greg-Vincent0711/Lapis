@@ -65,3 +65,5 @@ class Router:
             if route_segment != specific_path_segment:
                 return False
         return True
+
+router = Router()

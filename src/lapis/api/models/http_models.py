@@ -1,9 +1,11 @@
 from typing import Any, Dict, Optional
 import json
 
+from attr import dataclass
+
 # dataclass decorator auto generates double underscore boilerplate methods
 # __init__, __repr__, __eq__, for ex
-# NotImplementedError@dataclass
+NotImplementedError@dataclass
 class APIRequest:
     method: str
     path: str

@@ -20,7 +20,19 @@ class NotFoundError(APIError):
     def __init__(self, message: str = "Not found"):
         super().__init__(message, 404)
 
+class InvalidLocationError(APIError):
+    def __init__(self, message: str = "Invalid location"):
+        super().__init__(message, 404)
+
 class ValidationError(APIError):
+    def __init__(self, message: str):
+        super().__init__(message, 400)
+
+class LocationLimitExceededError(APIError):
+    def __init__(self, message: str):
+        super().__init__(message, 400)
+
+class DataAccessError(APIError):
     def __init__(self, message: str):
         super().__init__(message, 400)
 
