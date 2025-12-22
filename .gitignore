@@ -11,7 +11,7 @@ SeedInfoFns/tests/dependencies/*
 inputHandler
 SeedInfo_tests
 *.zip
-.DS_STORE
+.DS_Store
 layers/*
 layers
 python/*
