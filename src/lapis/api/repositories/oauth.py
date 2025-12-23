@@ -41,7 +41,6 @@ def getAuthorDataFromDiscord(accessToken: str):
     try:
         response = requests.get(userDataURL, headers=headers)
         response.raise_for_status()
-        print(response.json())
         return response.json()
     except requests.exceptions.RequestException as e:
         logger.error(f"Discord user info retrieval failed: {e}", exc_info=True)

@@ -5,7 +5,10 @@ we need to change the return type of db.py
 from api.models.http_models import APIRequest, APIResponse
 from src.lapis.api.repositories.db import *
 from src.lapis.api.services.db.db_services import *
-from src.lapis.api.repositories.oauth import retrieveAccessToken, getAuthorDataFromDiscord
+from src.lapis.api.services.oauth.oauth_services import get_credentials_attempt
+
+# this shouldn't use repositories.oauth, should be in oauth.services
+# from src.lapis.api.repositories.oauth import retrieveAccessToken, getAuthorDataFromDiscord
 from api.router import Router
 
 def save_location_handler(request: APIRequest) -> APIResponse:
@@ -59,19 +62,25 @@ def save_image_url_handler(request: APIRequest) -> APIResponse:
 # {} is syntax that matches _matches in router.py
 Router.register("POST", "/locations/{location_name}", save_image_url_handler)
 
-# def set_seed_handler(request: APIRequest) -> APIResponse:
-#     if not request.author_id:
-#         return APIResponse(401, {"error": "Unauthorized"})
-#     res = set_seed(request.author_id, request.body.seed)
-#     return APIResponse(202, {"Output of 'set_seed' operation": res})
-# Router.register("POST", "/seed", set_seed_handler)
+'''
+why do we need credentials_handler?
 
-
+When clicking connect to discord, we need to post the authcode.
+Just a POST
+'''
 def credentials_handler(request: APIRequest) -> APIResponse:
-    body = request.body
-    accessToken = retrieveAccessToken(body.accessToken)["id"]
-    storedAuthorID = getAuthorDataFromDiscord(accessToken)["id"]
-    statusCode, msg = verify_credentials(request.cognito_user_id, storedAuthorID)
+    try:
+        body = request.body
+        authCode = body.authCode
+        res = get_credentials_attempt(authCode, request.cognito_user_id)
+        return APIResponse(201, res)
+    except UnauthorizedError as e:
+        return APIResponse(401, {"error" : str(e)})
+    except DataAccessError as e:
+        return APIResponse(500, {"error" : str(e)})
+    
+    
+Router.register("POST", "/auth/callback", credentials_handler)
     
 def update_location_handler(request: APIRequest) -> APIResponse:
     try:

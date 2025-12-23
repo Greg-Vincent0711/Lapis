@@ -31,49 +31,31 @@ def get_location_count(author_id: str):
     )
     return response['Count']
 
-def get_credentials(cognito_user_id: str):
+def get_credentials(table, cognito_user_id: str) -> str:
     try:
-        table = get_table()
         response = table.query(
             IndexName='cognito-index',
             KeyConditionExpression=Key('cognito_user_id').eq(cognito_user_id)
         )
-        status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
-        if response['Items']:
-            return status, response['Items'][0]['Author_ID']
-        return status, "Could not retrieve credentials for user."
-        
+        items = response.get("Items", [])
+        return items
+
     except ClientError as e:
-        print(f"DynamoDB error in get_credentials: {e.response['Error']['Message']}")
-        raise Exception("Failed to retrieve credentials from database")
-    except Exception as e:
-        print(f"Unexpected error in get_credentials: {str(e)}")
-        raise Exception("Failed to retrieve credentials")
+        raise DataAccessError(f"DynamoDB error: {e.response['Error']['Message']}") from e
 
-
-def verify_credentials(cognito_user_id: str, author_id: str):
+def create_credentials(table, author_id: str, cognito_user_id: str):
     try:
-        table = get_table()
-        existing_author_id = get_credentials(cognito_user_id)
-        
-        if existing_author_id is None:
-            table.put_item(
-                Item={
-                    'Author_ID': author_id,
-                    'Location': generate_hash("__PROFILE__"),
-                    'cognito_user_id': cognito_user_id
-                }
-            )
-            return 200, "Credentials saved successfully."
-        else:
-            return 200, "Credentials exist already. You're good to go."
-            
+        table.put_item(
+            Item={
+                'Author_ID': author_id,
+                'Location': generate_hash("__PROFILE__"),
+                'cognito_user_id': cognito_user_id
+            }
+        )
+        return author_id
     except ClientError as e:
-        print(f"DynamoDB error in verify_credentials: {e.response['Error']['Message']}")
-        return 500, "Failed to save credentials to database"
-    except Exception as e:
-        print(f"Unexpected error in verify_credentials: {str(e)}")
-        return 500, "Failed to save credentials"
+        raise DataAccessError(f"DynamoDB error: {e.response['Error']['Message']}") from e
+
     
 # ---------------- POST / PUT METHODS ----------------
 def save_location(author_id: str, location_name: str, coords: str) -> None:
