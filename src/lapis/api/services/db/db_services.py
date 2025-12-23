@@ -107,7 +107,7 @@ def retrieve_seed(author_id: str):
         res = get_seed(author_id)
         if 'Item' not in res or 'World_Seed' not in res['Item']:
             raise NotFoundError("World seed not found for this user.")
-        return APIResponse(201, decrypt(res['Item']['World_Seed'].encode()).decode())
+        return decrypt(res['Item']['World_Seed'].encode()).decode()
 
             
 def delete_location_attempt(author_id: str, location_name: str):

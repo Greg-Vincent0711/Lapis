@@ -4,14 +4,13 @@ from src.lapis.api.services.db.db_services import *
 from api.router import Router
 
 def get_seed_handler(request: APIRequest) -> APIResponse:
-    """Get the user's seed value"""
-    if not request.author_id:
-        # presentation layer
-        return APIResponse(401, {"error": "Unauthorized"})
-    #  business logic layer, get_seed connects to data access layer
-    seed = get_seed(request.author_id)
-    # presentation layer
-    return APIResponse(200, {"seed": seed})
+    try:
+        seed = retrieve_seed(request.author_id)
+        return APIResponse(202, {"seed": seed})
+    except UnauthorizedError as e:
+        return APIResponse(e.status_code, e.message)
+    except NotFoundError as e:
+        return APIResponse(e.status_code, e.message)
 Router.register("GET", "/seed", get_seed_handler)
 
 def get_location_handler(request: APIRequest) -> APIResponse:

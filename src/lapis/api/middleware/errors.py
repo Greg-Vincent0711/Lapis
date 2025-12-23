@@ -34,7 +34,7 @@ class LocationLimitExceededError(APIError):
 
 class DataAccessError(APIError):
     def __init__(self, message: str):
-        super().__init__(message, 400)
+        super().__init__(message, 500)
 
 
 def error_handler_middleware(handler):

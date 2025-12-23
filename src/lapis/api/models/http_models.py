@@ -3,7 +3,7 @@ import json
 
 from attr import dataclass
 
-# dataclass decorator auto generates double underscore boilerplate methods
+# dataclass decorator auto generates double underscore(dunder) boilerplate methods
 # __init__, __repr__, __eq__, for ex
 NotImplementedError@dataclass
 class APIRequest:

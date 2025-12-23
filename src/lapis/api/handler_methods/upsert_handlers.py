@@ -6,9 +6,6 @@ from api.models.http_models import APIRequest, APIResponse
 from src.lapis.api.repositories.db import *
 from src.lapis.api.services.db.db_services import *
 from src.lapis.api.services.oauth.oauth_services import get_credentials_attempt
-
-# this shouldn't use repositories.oauth, should be in oauth.services
-# from src.lapis.api.repositories.oauth import retrieveAccessToken, getAuthorDataFromDiscord
 from api.router import Router
 
 def save_location_handler(request: APIRequest) -> APIResponse:
@@ -19,33 +16,35 @@ def save_location_handler(request: APIRequest) -> APIResponse:
         return APIResponse(201, res)
     # catch all the errors thrown by the business logic portion
     except UnauthorizedError as e:
-        return APIResponse(401, {"error": str(e)})
+        return APIResponse(e.status_code, e.message)
     
     except ValidationError as e:
-        return APIResponse(400, {"error": str(e)})
+        return APIResponse(e.status_code, e.message)
     
     except InvalidLocationError as e:
-        return APIResponse(422, {"error": str(e)})
+        return APIResponse(e.status_code, e.message)
 
     except LocationLimitExceededError as e:
-        return APIResponse(409, {"error": str(e)})
+        return APIResponse(e.status_code, e.message)
 
     except DataAccessError as e:
-        return APIResponse(500, {"error": str(e)})
+        return APIResponse(e.status_code, e.message)
 Router.register("POST", "/locations", save_location_handler)
+
 
 def set_seed_handler(request: APIRequest) -> APIResponse:
     try:
         body = request.body
         res = set_seed(request.author_id, body.seed)
-        return APIResponse(202, res)
+        return APIResponse(201, res)
     except UnauthorizedError as e:
-        return APIResponse(401, {"error": str(e)})
+        return APIResponse(e.status_code, e.message)
     except ValidationError as e:
-        return APIResponse(400, {"error": str(e)})
+        return APIResponse(e.status_code, e.message)
     except DataAccessError as e:
-        return APIResponse(500, {"error" : str(e)})
+        return APIResponse(e.status_code, e.message)
 Router.register("POST", "/seed", set_seed_handler)
+
 
 def save_image_url_handler(request: APIRequest) -> APIResponse:
     try:
@@ -54,19 +53,20 @@ def save_image_url_handler(request: APIRequest) -> APIResponse:
         res = create_image(request.author_id, body.location_name, body.message)
         return APIResponse(201, res)
     except ValidationError as e:
-        return APIResponse(400, {"error": str(e)})
+        return APIResponse(e.status_code, e.message)
     except UnauthorizedError as e:
-        return APIResponse(401, {"error": str(e)})
+        return APIResponse(e.status_code, e.message)
     except DataAccessError as e:
-        return APIResponse(500, {"error" : str(e)})
+        return APIResponse(e.status_code, e.message)
 # {} is syntax that matches _matches in router.py
 Router.register("POST", "/locations/{location_name}", save_image_url_handler)
+
 
 '''
 why do we need credentials_handler?
 
 When clicking connect to discord, we need to post the authcode.
-Just a POST
+Just a POST. Recieve back the author_id on the backend that requests are made with
 '''
 def credentials_handler(request: APIRequest) -> APIResponse:
     try:
@@ -75,12 +75,11 @@ def credentials_handler(request: APIRequest) -> APIResponse:
         res = get_credentials_attempt(authCode, request.cognito_user_id)
         return APIResponse(201, res)
     except UnauthorizedError as e:
-        return APIResponse(401, {"error" : str(e)})
+        return APIResponse(e.status_code, e.message)
     except DataAccessError as e:
-        return APIResponse(500, {"error" : str(e)})
-    
-    
+        return APIResponse(e.status_code, e.message)
 Router.register("POST", "/auth/callback", credentials_handler)
+
     
 def update_location_handler(request: APIRequest) -> APIResponse:
     try:
@@ -88,9 +87,9 @@ def update_location_handler(request: APIRequest) -> APIResponse:
         res = create_location_update(request.author_id, body.location_name, body.new_coords)
         return APIResponse(201, res)
     except UnauthorizedError as e:
-        return APIResponse(401, {"error" : str(e)})
+        return APIResponse(e.status_code, e.message)
     except ValidationError as e:
-        return APIResponse(400, {"error" : str(e)})
+        return APIResponse(e.status_code, e.message)
 Router.register("PUT", "/locations/{location_name}", update_location_handler)
 
 
