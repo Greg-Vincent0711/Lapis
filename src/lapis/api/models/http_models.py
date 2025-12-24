@@ -5,12 +5,12 @@ from attr import dataclass
 
 # dataclass decorator auto generates double underscore(dunder) boilerplate methods
 # __init__, __repr__, __eq__, for ex
-NotImplementedError@dataclass
+@dataclass
 class APIRequest:
     method: str
     path: str
-    body: Dict[str, Any]
-    path_params: Dict[str, str]
+    body: Dict[str, Any] = None
+    path_params: Dict[str, str] = None
     query_params: Optional[Dict[str, str]]
     cognito_user_id: Optional[str] = None
     author_id: Optional[str] = None

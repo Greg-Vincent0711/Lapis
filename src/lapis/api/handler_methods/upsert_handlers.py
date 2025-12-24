@@ -17,16 +17,12 @@ def save_location_handler(request: APIRequest) -> APIResponse:
     # catch all the errors thrown by the business logic portion
     except UnauthorizedError as e:
         return APIResponse(e.status_code, e.message)
-    
     except ValidationError as e:
         return APIResponse(e.status_code, e.message)
-    
     except InvalidLocationError as e:
         return APIResponse(e.status_code, e.message)
-
     except LocationLimitExceededError as e:
         return APIResponse(e.status_code, e.message)
-
     except DataAccessError as e:
         return APIResponse(e.status_code, e.message)
 Router.register("POST", "/locations", save_location_handler)
@@ -59,7 +55,7 @@ def save_image_url_handler(request: APIRequest) -> APIResponse:
     except DataAccessError as e:
         return APIResponse(e.status_code, e.message)
 # {} is syntax that matches _matches in router.py
-Router.register("POST", "/locations/{location_name}", save_image_url_handler)
+Router.register("PUT", "/locations/{location_name}/img", save_image_url_handler)
 
 
 '''
@@ -91,8 +87,5 @@ def update_location_handler(request: APIRequest) -> APIResponse:
     except ValidationError as e:
         return APIResponse(e.status_code, e.message)
 Router.register("PUT", "/locations/{location_name}", update_location_handler)
-
-
-
 
 

@@ -29,6 +29,6 @@ async def delete_image_url_handler(request: APIRequest) -> APIResponse:
     except ValidationError as e:
         return APIResponse(400, str(e))
 # add this route to api gateway
-Router.register("DELETE", "/locations/{location_name}/url", delete_image_url_attempt)
+Router.register("DELETE", "/locations/{location_name}/img", delete_image_url_attempt)
     
     

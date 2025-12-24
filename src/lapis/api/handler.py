@@ -3,9 +3,7 @@
 '''
     This handler is a lot cleaner now that there's a 
     clear separation of concerns. Much more general
-    
-    TODO 
-    - make it so that all service endpoints(dynamo db) return success or an error
+    TODO - get this into Lambda, start testing + tests in the future
 '''
 
 from api.models.http_models import APIRequest, APIResponse
