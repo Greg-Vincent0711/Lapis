@@ -68,8 +68,8 @@ def credentials_handler(request: APIRequest) -> APIResponse:
     try:
         body = request.body
         authCode = body.authCode
-        res = get_credentials_attempt(request.cognito_user_id, authCode)
-        return APIResponse(201, res)
+        get_credentials_attempt(request.cognito_user_id, authCode)
+        return APIResponse(204, None)
     except UnauthorizedError as e:
         return APIResponse(e.status_code, e.message)
     except DataAccessError as e:
