@@ -21,9 +21,8 @@ def get_credentials_attempt(request: APIRequest, authCode: str = None):
         raise UnauthorizedError("Cognito User ID is required")
 
     # both api calls: get_credentials and create_credentials throw errors. presentation layer catches
-    response = get_credentials(table, request.cognito_user_id)
-    items = response.get("Items", [])
-
+    items = get_credentials(table, request.cognito_user_id)
+    
     if not items:
         if not authCode:
             raise UnauthorizedError("An authcode is required to retrieve the Discord author_id.")
