@@ -6,8 +6,8 @@ Really, just check for a lot of different error cases
 then if we pass them all, call the external service
 '''
 from src.lapis.helpers.utils import *
-from api.middleware.errors import *
-from api.repositories.db import *
+from src.lapis.api.middleware.errors import *
+from src.lapis.api.repositories.db import *
 
 def create_location(author_id: str, location_name: str, coords: str):
     if not author_id:

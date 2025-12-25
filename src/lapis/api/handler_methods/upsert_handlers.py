@@ -6,7 +6,7 @@ from api.models.http_models import APIRequest, APIResponse
 from src.lapis.api.repositories.db import *
 from src.lapis.api.services.db.db_services import *
 from src.lapis.api.services.oauth.oauth_services import get_credentials_attempt
-from api.router import Router
+from api.router import router
 
 def save_location_handler(request: APIRequest) -> APIResponse:
     try:
@@ -25,7 +25,7 @@ def save_location_handler(request: APIRequest) -> APIResponse:
         return APIResponse(e.status_code, e.message)
     except DataAccessError as e:
         return APIResponse(e.status_code, e.message)
-Router.register("POST", "/locations", save_location_handler)
+router.register("POST", "/locations", save_location_handler)
 
 
 def set_seed_handler(request: APIRequest) -> APIResponse:
@@ -39,7 +39,7 @@ def set_seed_handler(request: APIRequest) -> APIResponse:
         return APIResponse(e.status_code, e.message)
     except DataAccessError as e:
         return APIResponse(e.status_code, e.message)
-Router.register("POST", "/seed", set_seed_handler)
+router.register("POST", "/seed", set_seed_handler)
 
 
 def save_image_url_handler(request: APIRequest) -> APIResponse:
@@ -55,7 +55,7 @@ def save_image_url_handler(request: APIRequest) -> APIResponse:
     except DataAccessError as e:
         return APIResponse(e.status_code, e.message)
 # {} is syntax that matches _matches in router.py
-Router.register("PUT", "/locations/{location_name}/img", save_image_url_handler)
+router.register("PUT", "/locations/{location_name}/img", save_image_url_handler)
 
 
 '''
@@ -68,13 +68,13 @@ def credentials_handler(request: APIRequest) -> APIResponse:
     try:
         body = request.body
         authCode = body.authCode
-        res = get_credentials_attempt(authCode, request.cognito_user_id)
+        res = get_credentials_attempt(request.cognito_user_id, authCode)
         return APIResponse(201, res)
     except UnauthorizedError as e:
         return APIResponse(e.status_code, e.message)
     except DataAccessError as e:
         return APIResponse(e.status_code, e.message)
-Router.register("POST", "/auth/callback", credentials_handler)
+router.register("POST", "/auth/callback", credentials_handler)
 
     
 def update_location_handler(request: APIRequest) -> APIResponse:
@@ -86,6 +86,6 @@ def update_location_handler(request: APIRequest) -> APIResponse:
         return APIResponse(e.status_code, e.message)
     except ValidationError as e:
         return APIResponse(e.status_code, e.message)
-Router.register("PUT", "/locations/{location_name}", update_location_handler)
+router.register("PUT", "/locations/{location_name}", update_location_handler)
 
 

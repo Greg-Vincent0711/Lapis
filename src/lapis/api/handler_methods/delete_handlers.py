@@ -1,9 +1,9 @@
 '''
 DELETE DB handlers
 '''
-from api.models.http_models import APIRequest, APIResponse
+from src.lapis.api.models.http_models import APIRequest, APIResponse
 from src.lapis.api.services.db.db_services import *
-from api.router import Router
+from src.lapis.api.router import router
 
 def delete_location_handler(request: APIRequest) -> APIResponse:
     try:
@@ -16,7 +16,7 @@ def delete_location_handler(request: APIRequest) -> APIResponse:
         return APIResponse(400, str(e))
     except NotFoundError as e:
         return APIResponse(404, str(e))
-Router.register("DELETE", "/locations/{location_name}", delete_location_handler)
+router.register("DELETE", "/locations/{location_name}", delete_location_handler)
 
 
 async def delete_image_url_handler(request: APIRequest) -> APIResponse:
@@ -29,6 +29,6 @@ async def delete_image_url_handler(request: APIRequest) -> APIResponse:
     except ValidationError as e:
         return APIResponse(400, str(e))
 # add this route to api gateway
-Router.register("DELETE", "/locations/{location_name}/img", delete_image_url_attempt)
+router.register("DELETE", "/locations/{location_name}/img", delete_image_url_attempt)
     
     

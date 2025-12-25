@@ -1,6 +1,5 @@
 from typing import Any, Dict, Optional
 import json
-
 from attr import dataclass
 
 # dataclass decorator auto generates double underscore(dunder) boilerplate methods
@@ -9,9 +8,10 @@ from attr import dataclass
 class APIRequest:
     method: str
     path: str
+    # go back to this portion
+    query_params: Optional[Dict[str, str]] = None
     body: Dict[str, Any] = None
     path_params: Dict[str, str] = None
-    query_params: Optional[Dict[str, str]]
     cognito_user_id: Optional[str] = None
     author_id: Optional[str] = None
     
@@ -32,6 +32,8 @@ class APIRequest:
             except json.JSONDecodeError:
                 body = {}
         
+        
+        
         # improve this later
         path_params = {}
         if path.startswith("/locations/") and len(path.split("/")) >= 3:
@@ -43,14 +45,13 @@ class APIRequest:
             .get("jwt", {})
             .get("claims", {})
             .get("sub")
-        )
-        
+        )    
         return cls(
             method=method,
             path=path,
             body=body,
             path_params=path_params,
-            cognito_user_id=cognito_user_id
+            cognito_user_id=cognito_user_id,
         )
 
 class APIResponse:

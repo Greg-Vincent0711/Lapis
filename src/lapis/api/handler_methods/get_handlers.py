@@ -1,7 +1,7 @@
 from api.models.http_models import APIRequest, APIResponse
 from src.lapis.api.repositories.db import *
 from src.lapis.api.services.db.db_services import *
-from api.router import Router
+from api.router import router
 
 def get_seed_handler(request: APIRequest) -> APIResponse:
     try:
@@ -11,7 +11,7 @@ def get_seed_handler(request: APIRequest) -> APIResponse:
         return APIResponse(e.status_code, e.message)
     except NotFoundError as e:
         return APIResponse(e.status_code, e.message)
-Router.register("GET", "/seed", get_seed_handler)
+router.register("GET", "/seed", get_seed_handler)
 
 def get_location_handler(request: APIRequest) -> APIResponse:
     try:
@@ -23,7 +23,7 @@ def get_location_handler(request: APIRequest) -> APIResponse:
         return APIResponse(400, str(e))
     except DataAccessError as e:
         return APIResponse(500, str(e))
-Router.register("GET", "/location/{location_name}", get_location_handler)
+router.register("GET", "/location/{location_name}", get_location_handler)
         
 
 def get_locations_handler(request: APIRequest) -> APIResponse:
@@ -34,4 +34,4 @@ def get_locations_handler(request: APIRequest) -> APIResponse:
         return APIResponse(401, str(e))
     except NotFoundError as e:
         return APIResponse(404, str(e))
-Router.register("GET", "/locations", get_locations_handler)
+router.register("GET", "/locations", get_locations_handler)
