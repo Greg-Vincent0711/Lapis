@@ -3,7 +3,7 @@ encryption.py and key_generation.py together encrypt/decrypt set in transit to D
 '''
 import hashlib
 # check SM for a key, etc
-from key_generation import generate_fernet
+from src.lapis.api.services.encryption.key_generation import generate_fernet
 from cryptography.fernet import Fernet
 
 def getFernet():

@@ -29,8 +29,9 @@ def get_credentials_attempt(request: APIRequest, authCode: str = None):
         accessToken = retrieveAccessToken(authCode)
         author_id = getAuthorDataFromDiscord(accessToken["access_token"])["id"]
         create_credentials(table, author_id, request.cognito_user_id)
-        return
-    return     
+        return author_id
+    else:
+        return items[0]["Author_ID"]
 
 # get the author_ID here
 def getAuthorDataFromDiscord(accessToken: str):

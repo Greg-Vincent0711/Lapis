@@ -9,7 +9,7 @@ from src.lapis.helpers.utils import *
 from src.lapis.api.middleware.errors import *
 from src.lapis.api.repositories.db import *
 
-def create_location(author_id: str, location_name: str, coords: str):
+def create_location(author_id: str, location_name: str, location_type: str, coords: str):
     if not author_id:
         raise UnauthorizedError("You must provide an author ID to make requests.")
     elif not location_name or not coords:
@@ -18,12 +18,14 @@ def create_location(author_id: str, location_name: str, coords: str):
         raise InvalidLocationError(f"The location name provided: {location_name} is invalid.")
     elif not isCorrectCoordFormat(coords):
         raise InvalidLocationError(f"Invalid coordinates provided: {coords}.")
+    elif not validType(location_type):
+        raise InvalidLocationError(f"Invalid location type provided.")
     elif get_location_count(author_id) >= 10:
         raise LocationLimitExceededError("Max 10 locations allowed. Please delete one first.")
     else:
         remaining = 10 - (get_location_count(author_id) + 1)
         # connect to data access layer
-        save_location(author_id, location_name, coords)            
+        save_location(author_id, location_name, location_type, coords)            
         return {
             "location_name": location_name,
             "remaining_locations": remaining

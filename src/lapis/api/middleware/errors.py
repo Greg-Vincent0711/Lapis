@@ -1,5 +1,5 @@
 # api/middleware/errors.py
-from api.models.http_models import APIResponse
+from src.lapis.api.models.http_models import APIResponse
 
 class APIError(Exception):
     """Base class for API errors"""

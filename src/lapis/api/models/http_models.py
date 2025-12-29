@@ -8,7 +8,6 @@ from attr import dataclass
 class APIRequest:
     method: str
     path: str
-    # go back to this portion
     query_params: Optional[Dict[str, str]] = None
     body: Dict[str, Any] = None
     path_params: Dict[str, str] = None
@@ -31,9 +30,7 @@ class APIRequest:
                 body = json.loads(event["body"])
             except json.JSONDecodeError:
                 body = {}
-        
-        
-        
+                
         # improve this later
         path_params = {}
         if path.startswith("/locations/") and len(path.split("/")) >= 3:

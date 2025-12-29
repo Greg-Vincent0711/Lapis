@@ -2,7 +2,7 @@
 Presentation Layer(http requests, responses)
 '''
 from typing import Callable, Dict, Tuple
-from api.models.http_models import APIRequest, APIResponse
+from src.lapis.api.models.http_models import APIRequest, APIResponse
 
 class Router:
     def __init__(self):
@@ -38,7 +38,7 @@ class Router:
             if method == request.method and self.pathPatternsMatch(path_pattern, request.path):
                 return handler(request)
         
-        return APIResponse(404, {"error": "Route not found"})
+        return APIResponse(404, {"error": "Route not found"}).to_lambda_response()
     
     '''
         Pattern matching for paths like /locations/{name}
@@ -57,7 +57,7 @@ class Router:
         # Compare each segment of the pattern with the corresponding path segment
         for route_segment, specific_path_segment in zip(route_segments, specific_path_segments):
             # If pattern segment is a wildcard (like {id} or {name}), it matches anything
-            if route_segment.startswith("{") and specific_path_segment.endswith("}"):
+            if route_segment.startswith("{") and route_segment.endswith("}"):
                 continue  # Wildcard matches anything
             
             # If it's not a wildcard, the segments must match exactly
@@ -67,3 +67,4 @@ class Router:
         return True
 
 router = Router()
+print("All routes",router.routes)

@@ -64,6 +64,9 @@ def format_coords(coord_string: str) -> str:
     individualCoords = [coord for coord in re.split(r'[,\s]+', coord_string.strip()) if coord]
     return ",".join(individualCoords)
 
+def validType(type: str) -> bool:
+    return type in ["Overworld", "Nether", "The End"]
+
 # seeds must only contain printable characters
 def validate_seed(seed: str):
     printableCharacters = r'^[\w\s!"#$%&\'()*+,\-./:;<=>?@[\\\]^_`{|}~]+$'

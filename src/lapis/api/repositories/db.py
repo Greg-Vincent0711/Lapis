@@ -58,7 +58,7 @@ def create_credentials(table, author_id: str, cognito_user_id: str):
 
     
 # ---------------- POST / PUT METHODS ----------------
-def save_location(author_id: str, location_name: str, coords: str) -> None:
+def save_location(author_id: str, location_name: str, location_type: str, coords: str) -> None:
     table = get_table()
     try:
         location_hash = generate_hash(location_name)
@@ -67,6 +67,7 @@ def save_location(author_id: str, location_name: str, coords: str) -> None:
                 "Author_ID": str(author_id),
                 "Location": location_hash,
                 "Location_Name": encrypt(location_name).decode(),
+                "Location Type": encrypt(location_type).decode(),
                 "Coordinates": encrypt(coords).decode(),
             }
         )
