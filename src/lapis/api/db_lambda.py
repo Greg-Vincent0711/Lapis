@@ -23,15 +23,19 @@ from src.lapis.api.router import router
 @error_handler_middleware
 def handler(event, context):
     try:
+        path = event.get("rawPath", "")
+        # strip "/prod" prefix before creating request
+        if path.startswith("/prod"):
+            path = path[len("/prod"):]
+            # Update event with modified path for request parsing
+            event_copy = event.copy()
+            event_copy["rawPath"] = path
+            event = event_copy
+        
         request = APIRequest.from_lambda_event(event)
         if request.path != "/auth/callback":
             request.author_id = get_credentials_attempt(request)
-        path = event.get("rawPath", "")
-        # strip "/prod"
-        if path.startswith("/prod"):
-            request.path = path[len("/prod"):]
         # we reach the backend
-        # print("Request recieved from lapis.site processed on backend", request)
         print("Request recieved from lapis.site processed on backend", request)
         if (request.method, request.path) in router.routes or \
            any(router.pathPatternsMatch(pattern, request.path) for _, pattern in router.routes.keys()):

@@ -24,6 +24,8 @@ def encrypt(userData: str):
     # encrypt only takes binary data as a parameter, hence using encode
     return fernetInstance.encrypt(userData.encode())
 
-def decrypt(encryptedData: str):
+def decrypt(encryptedData: str | bytes):
     fernetInstance = getFernet()
+    if isinstance(encryptedData, str):
+        encryptedData = encryptedData.encode()
     return fernetInstance.decrypt(encryptedData)

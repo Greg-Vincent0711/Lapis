@@ -66,9 +66,11 @@ Just a POST. Recieve back the author_id on the backend that requests are made wi
 '''
 def credentials_handler(request: APIRequest) -> APIResponse:
     try:
-        body = request.body
-        authCode = body.authCode
-        get_credentials_attempt(request.cognito_user_id, authCode)
+        body = request.body or {}
+        authCode = body.get("authCode")
+        if not authCode:
+            return APIResponse(400, "authCode is required")
+        get_credentials_attempt(request, authCode)
         return APIResponse(204, None)
     except UnauthorizedError as e:
         return APIResponse(e.status_code, e.message)

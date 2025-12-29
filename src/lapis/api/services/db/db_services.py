@@ -5,9 +5,13 @@ Validates http requests before accessing repositories layer(db)
 Really, just check for a lot of different error cases
 then if we pass them all, call the external service
 '''
+import logging
 from src.lapis.helpers.utils import *
 from src.lapis.api.middleware.errors import *
 from src.lapis.api.repositories.db import *
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 def create_location(author_id: str, location_name: str, location_type: str, coords: str):
     if not author_id:
@@ -31,7 +35,7 @@ def create_location(author_id: str, location_name: str, location_type: str, coor
             "remaining_locations": remaining
         }
 
-def create_seed(author_id: str, seed: str):
+def set_seed(author_id: str, seed: str):
     if not author_id:
         raise UnauthorizedError("You must provide an author ID to make requests of any type.")
     elif not seed:
@@ -67,7 +71,8 @@ def create_location_update(author_id: str, location_name: str, new_coords: str):
     else:
         res = update_location(author_id, location_name, new_coords)
         if "Attributes" in res:
-            return decrypt(res['Attributes']['Coordinates']).decode()
+            coords_encrypted = res['Attributes']['Coordinates']
+            return decrypt(coords_encrypted).decode()
         else:
             msg = f"Location '{location_name}' not found or update failed."
             logger.error(msg)
@@ -84,11 +89,13 @@ def retrieve_location(author_id: str, location_name: str):
             raise InvalidLocationError(f"Location '{location_name}' not found.")
         
         item = res['Item']
-        decrypted_coords = decrypt(item['Coordinates'].encode()).decode()
+        coords_encrypted = item['Coordinates']
+        decrypted_coords = decrypt(coords_encrypted).decode()
         result = {"Coordinates": decrypted_coords}
 
         if item.get("Image_URL"):
-            result["Image_URL"] = decrypt(item["Image_URL"].encode()).decode()
+            image_url_encrypted = item["Image_URL"]
+            result["Image_URL"] = decrypt(image_url_encrypted).decode()
         return result
 
 def retrieve_locations(author_id: str):
@@ -109,7 +116,8 @@ def retrieve_seed(author_id: str):
         res = get_seed(author_id)
         if 'Item' not in res or 'World_Seed' not in res['Item']:
             raise NotFoundError("World seed not found for this user.")
-        return decrypt(res['Item']['World_Seed'].encode()).decode()
+        seed_encrypted = res['Item']['World_Seed']
+        return decrypt(seed_encrypted).decode()
 
             
 def delete_location_attempt(author_id: str, location_name: str):
@@ -134,7 +142,8 @@ async def delete_image_url_attempt(author_id: str, location_name: str):
     else:
         res = delete_image_url(author_id, location_name)
         if "Attributes" in res and "Image_URL" in res["Attributes"]:
-            delete_url = decrypt(res['Attributes']['Image_URL']).decode()
+            image_url_encrypted = res['Attributes']['Image_URL']
+            delete_url = decrypt(image_url_encrypted).decode()
             # two fold operation - delete the generated url AND the image data itself
             await deleteImage(delete_url)
             return f"Deleted image URL for location '{location_name}'."

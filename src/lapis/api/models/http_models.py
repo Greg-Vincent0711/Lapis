@@ -24,17 +24,31 @@ class APIRequest:
         method = event.get("requestContext", {}).get("http", {}).get("method", "")
         path = event.get("rawPath", "")
         
+        # Parse query string parameters
+        query_params = {}
+        query_string = event.get("queryStringParameters")
+        if query_string:
+            query_params = query_string
+        elif event.get("rawQueryString"):
+            # Parse raw query string if queryStringParameters is not available
+            for param in event.get("rawQueryString", "").split("&"):
+                if "=" in param:
+                    key, value = param.split("=", 1)
+                    query_params[key] = value
+        
         body = {}
         if event.get("body"):
             try:
                 body = json.loads(event["body"])
             except json.JSONDecodeError:
                 body = {}
-                
-        # improve this later
+        
+        # Extract path parameters generically
         path_params = {}
-        if path.startswith("/locations/") and len(path.split("/")) >= 3:
-            path_params['location_name'] = path.split("/")[2]
+        path_segments = path.strip("/").split("/")
+        # This will be enhanced by router pattern matching, but extract common patterns
+        if len(path_segments) >= 2 and path_segments[0] == "locations":
+            path_params['location_name'] = path_segments[1]
         
         cognito_user_id = (
             event.get("requestContext", {})
@@ -47,6 +61,7 @@ class APIRequest:
             method=method,
             path=path,
             body=body,
+            query_params=query_params,
             path_params=path_params,
             cognito_user_id=cognito_user_id,
         )
@@ -61,7 +76,7 @@ class APIResponse:
         return {
             "statusCode": self.status_code,
             "headers": {
-                "Access-Control-Allow-Origin": "http://localhost:5173",
+                "Access-Control-Allow-Origin": "*",
                 "Access-Control-Allow-Credentials": "true",
                 "Content-Type": "application/json"
             },

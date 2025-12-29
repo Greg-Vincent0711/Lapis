@@ -1,6 +1,8 @@
 '''
 Presentation Layer(http requests, responses)
 '''
+import asyncio
+import inspect
 from typing import Callable, Dict, Tuple
 from src.lapis.api.models.http_models import APIRequest, APIResponse
 
@@ -28,6 +30,8 @@ class Router:
         if requestInfo in self.routes:
             handler_fn = self.routes[requestInfo]
             # call the handler matching the APIRequest type
+            if inspect.iscoroutinefunction(handler_fn):
+                return asyncio.run(handler_fn(request))
             return handler_fn(request)
         
         # otherwise, iterate over all possible routes we have
@@ -36,9 +40,17 @@ class Router:
             # Check if HTTP method matches AND path pattern matches
             # ex: method="GET" and path_pattern="/users/{id}" matches request path "/users/123"
             if method == request.method and self.pathPatternsMatch(path_pattern, request.path):
+                # Extract path parameters from the matched pattern
+                path_params = self.extractPathParams(path_pattern, request.path)
+                if path_params:
+                    if request.path_params is None:
+                        request.path_params = {}
+                    request.path_params.update(path_params)
+                if inspect.iscoroutinefunction(handler):
+                    return asyncio.run(handler(request))
                 return handler(request)
         
-        return APIResponse(404, {"error": "Route not found"}).to_lambda_response()
+        return APIResponse(404, {"error": "Route not found"})
     
     '''
         Pattern matching for paths like /locations/{name}
@@ -65,6 +77,24 @@ class Router:
             if route_segment != specific_path_segment:
                 return False
         return True
+    
+    '''
+        Extract path parameters from a matched route pattern
+        Example: routePattern="/locations/{location_name}", specificPath="/locations/my-location"
+        Returns: {"location_name": "my-location"}
+    '''
+    def extractPathParams(self, routePattern: str, specificPath: str) -> Dict[str, str]:
+        route_segments = routePattern.split("/")
+        specific_path_segments = specificPath.split("/")
+        params = {}
+        
+        for route_segment, specific_path_segment in zip(route_segments, specific_path_segments):
+            if route_segment.startswith("{") and route_segment.endswith("}"):
+                # Extract parameter name (remove { and })
+                param_name = route_segment[1:-1]
+                params[param_name] = specific_path_segment
+        
+        return params
 
 router = Router()
 print("All routes",router.routes)

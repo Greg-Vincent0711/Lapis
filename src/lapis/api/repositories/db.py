@@ -178,7 +178,7 @@ def list_locations(author_id: str) -> list[dict]:
     table = get_table()
     try:
         res = table.query(
-            KeyConditionExpression=boto3.dynamodb.conditions.Key("Author_ID").eq(str(author_id))
+            KeyConditionExpression=Key("Author_ID").eq(str(author_id))
         )
         return res
     except ClientError as e:
