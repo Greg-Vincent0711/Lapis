@@ -27,6 +27,7 @@ def handler(event, context):
         # strip "/prod" prefix before creating request
         if path.startswith("/prod"):
             path = path[len("/prod"):]
+            print("path we're matching on", path)
             # Update event with modified path for request parsing
             event_copy = event.copy()
             event_copy["rawPath"] = path
@@ -36,11 +37,14 @@ def handler(event, context):
         if request.path != "/auth/callback":
             request.author_id = get_credentials_attempt(request)
         # we reach the backend
+        print("Routes we can use:", router.routes)
         print("Request recieved from lapis.site processed on backend", request)
         if (request.method, request.path) in router.routes or \
            any(router.pathPatternsMatch(pattern, request.path) for _, pattern in router.routes.keys()):
             # pass on to respective handler
+            print("handler and path from request has matched somewhere")
             response: APIResponse = router.route(request)
+            print("Response sent from backend to lapis.site", response.to_lambda_response())
             return response.to_lambda_response()
     except Exception as e:
         print(f"Handler error: {e}")

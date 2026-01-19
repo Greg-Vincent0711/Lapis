@@ -1,6 +1,6 @@
 import re
 from src.lapis.api.services.encryption.encryption import decrypt, generate_hash
-from src.lapis.helpers.features import *
+# from src.lapis.helpers.features import *
 import hashlib
 import struct
 import discord
@@ -32,28 +32,94 @@ def isCorrectCoordFormat(coordinates: str) -> str | bool:
         return "Coordinates are not valid integers(can't be decimals like '10.5' for example)."
     return True
 
+# hold onto this
+# image_url_encrypted = entry.get("Image_URL")
+                # if image_url_encrypted:
+                #     decrypted_entry["Image_URL"] = decrypt(image_url_encrypted.encode()).decode()
+
+
+# def extract_decrypted_locations(encryptedData):
+#     decryptedLocations = []
+#     for entry in encryptedData:
+#         try:
+#             # Exclude profile record
+#             if entry.get("Location") != "__PROFILE__":
+#                 decrypted_entry = {
+#                     "Location_Name": decrypt(entry["Location_Name"]).decode(),
+#                     "Coordinates": decrypt(entry["Coordinates"]).decode(),
+#                     "Type": decrypt(entry["Location Type"]).decode()
+#                 }
+#                 decryptedLocations.append(decrypted_entry)
+#         except Exception as e:
+#             print("Failed entry:", entry)
+#             print("Error:", e)
+#     print("Outside loop")
+#     print("Decrypted locations", decryptedLocations)
+#     return decryptedLocations
+
+
+
+# def extract_decrypted_locations(encryptedData):
+#     decryptedLocations = []
+#     for entry in encryptedData:
+#         if entry.get("Location") == "__PROFILE__":
+#             continue
+#         try:
+#             decryptedLocations.append({
+#                 "Location_Name": decrypt(entry.get("Location_Name", b"")).decode(),
+#                 "Coordinates": decrypt(entry.get("Coordinates", b"")).decode(),
+#                 "Type": decrypt(entry.get("Location Type", b"")).decode()
+#             })
+#             print(decryptedLocations)
+#         except Exception as e:
+#             print(f"Failed to decrypt entry: {entry}. Error: {e}")
+#             raise NotFoundError(f"Failed to decrypt entry: {entry}. Error: {e}")
+    
+#     return decryptedLocations
 def extract_decrypted_locations(encryptedData):
+    print(f"Total entries to process: {len(encryptedData)}")
     decryptedLocations = []
-    profile_hash = generate_hash("__PROFILE__")
-    for entry in encryptedData:
+    
+    for i, entry in enumerate(encryptedData):
+        print(f"\n--- Entry {i} ---")
+        print(f"Keys in entry: {list(entry.keys())}")
+        
+        if entry.get("Location") == "__PROFILE__":
+            print("Skipping __PROFILE__")
+            continue
+        
         try:
-            # Skip profile item
-            if entry.get('Location') == profile_hash:
+            # Check if required keys exist
+            location_name_encrypted = entry.get("Location_Name")
+            coordinates_encrypted = entry.get("Coordinates")
+            type_encrypted = entry.get("Location Type")
+            
+            print(f"Location_Name exists: {location_name_encrypted is not None}")
+            print(f"Coordinates exists: {coordinates_encrypted is not None}")
+            print(f"Location Type exists: {type_encrypted is not None}")
+            
+            # Skip entries missing required fields
+            if not all([location_name_encrypted, coordinates_encrypted, type_encrypted]):
+                print(f"⚠️ Skipping entry {i} - missing required fields")
                 continue
-            # Skip items without Location_Name (profile items)
-            if 'Location_Name' not in entry or 'Coordinates' not in entry:
-                continue
-            decrypted_entry = {
-                'Location_Name': decrypt(entry['Location_Name']).decode(),
-                'Coordinates': decrypt(entry['Coordinates']).decode()
-            }
-            image_url_encrypted = entry.get("Image_URL")
-            if image_url_encrypted:
-                decrypted_entry["Image_URL"] = decrypt(image_url_encrypted.encode()).decode()
-            decryptedLocations.append(decrypted_entry)
+            
+            decryptedLocations.append({
+                "Location_Name": decrypt(location_name_encrypted).decode(),
+                "Coordinates": decrypt(coordinates_encrypted).decode(),
+                "Type": decrypt(type_encrypted).decode()
+            })
+            print(f"✓ Successfully decrypted entry {i}")
+            
         except Exception as e:
-            print(f"Error decrypting an item: {e}")
+            print(f"❌ ERROR on entry {i}: {type(e).__name__}: {e}")
+            # Option A: Skip bad entries instead of failing entirely
+            continue
+            # Option B: Fail on first error (current behavior)
+            # raise NotFoundError(f"Failed to decrypt entry {i}. Error: {e}")
+    
+    print(f"\nTotal decrypted: {len(decryptedLocations)} out of {len([e for e in encryptedData if e.get('Location') != '__PROFILE__'])} non-profile entries")
     return decryptedLocations
+
 
 '''
 normalizes coordinates: 
@@ -102,27 +168,27 @@ that's passed. It may create more work than needed. So for now, repeat auto_comp
 '''
 
 # first two are for spawn near. Each popup window only shows feature specific examples.
-async def biome_autocomplete(interaction: discord.Interaction, current: str):
-    current = current.lower()
-    return [
-        app_commands.Choice(name=feature, value=feature)
-        for feature in BIOMES
-        if feature.lower().startswith(current)
-    ][:MAX_SUGGESTIONS]
+# async def biome_autocomplete(interaction: discord.Interaction, current: str):
+#     current = current.lower()
+#     return [
+#         app_commands.Choice(name=feature, value=feature)
+#         for feature in BIOMES
+#         if feature.lower().startswith(current)
+#     ][:MAX_SUGGESTIONS]
     
-async def structure_autocomplete(interaction: discord.Interaction, current: str):
-    current = current.lower()
-    return [
-        app_commands.Choice(name=feature, value=feature)
-        for feature in STRUCTURES
-        if feature.lower().startswith(current)
-    ][:MAX_SUGGESTIONS]
+# async def structure_autocomplete(interaction: discord.Interaction, current: str):
+#     current = current.lower()
+#     return [
+#         app_commands.Choice(name=feature, value=feature)
+#         for feature in STRUCTURES
+#         if feature.lower().startswith(current)
+#     ][:MAX_SUGGESTIONS]
 
-# specifically for nearest(Structure/Biome)
-async def feature_autocomplete(interaction: discord.Interaction, current: str):
-    current = current.lower()
-    return [
-        app_commands.Choice(name=feature, value=feature)
-        for feature in ALL_FEATURES
-        if feature.lower().startswith(current)
-    ][:MAX_SUGGESTIONS]
+# # specifically for nearest(Structure/Biome)
+# async def feature_autocomplete(interaction: discord.Interaction, current: str):
+#     current = current.lower()
+#     return [
+#         app_commands.Choice(name=feature, value=feature)
+#         for feature in ALL_FEATURES
+#         if feature.lower().startswith(current)
+#     ][:MAX_SUGGESTIONS]

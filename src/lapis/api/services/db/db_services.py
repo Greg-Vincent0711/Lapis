@@ -103,8 +103,10 @@ def retrieve_locations(author_id: str):
         raise UnauthorizedError("You must provide an author ID to make requests of any type.")
     res = list_locations(author_id)
     encrypted_locations = res.get('Items', [])
+    print("encrypted locations", encrypted_locations)
     unencrypted_locations = extract_decrypted_locations(encrypted_locations)
-    if len(encrypted_locations) >= 1:
+    print("unencrypted locations", unencrypted_locations)
+    if unencrypted_locations:
         return unencrypted_locations
     else:
         raise NotFoundError("No locations exist for this user.")
