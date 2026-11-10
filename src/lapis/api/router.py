@@ -98,4 +98,3 @@ class Router:
         return params
 
 router = Router()
-print("All routes",router.routes)

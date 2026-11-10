@@ -193,3 +193,32 @@ def test_a_rejected_discord_code_is_unauthorized_not_a_crash():
 def test_linked_user_gets_their_discord_id():
     with patch.object(oauth_services, "get_table"), patch.object(oauth_services, "get_credentials", return_value=[{"Author_ID": "729"}]):
         assert oauth_services.get_credentials_attempt(_linking_request()) == "729"
+
+
+# ---------- text seeds match Minecraft Java Edition ----------
+from src.lapis.helpers.utils import to_minecraft_seed
+
+# expected values were produced by running String.hashCode() in Java itself
+@pytest.mark.parametrize("typed, minecraft_uses", [
+    ("hello", "99162322"),
+    ("glacier", "108181935"),
+    ("Lapis World", "1007338359"),
+    ("café", "3045921"),
+    ("🙂seed", "991396246"),                  # outside the basic plane: Java hashes two UTF-16 units
+    ("99999999999999999999", "1260560192"),  # too big for a long, so Minecraft hashes it as text
+    ("  12345 ", "12345"),
+    ("-4530634556500121041", "-4530634556500121041"),
+])
+def test_text_seeds_become_the_same_number_minecraft_uses(typed, minecraft_uses):
+    assert to_minecraft_seed(typed) == minecraft_uses
+    # converting again changes nothing, so it's safe to apply when reading too
+    assert to_minecraft_seed(minecraft_uses) == minecraft_uses
+
+def test_seed_tools_convert_old_text_seeds_when_reading():
+    from src.lapis.api import subprocess as seed_runner
+    with patch.object(seed_runner, "retrieve_seed", return_value="glacier"), \
+         patch.object(seed_runner.subprocess, "run") as run, \
+         patch.dict("os.environ", {"EXECUTABLE_NAME": "/bin/inputHandler"}):
+        run.return_value = MagicMock(stdout='{"ok": true}', returncode=0)
+        seed_runner.connectToInputHandler("123", ["nearest", "plains", "0", "64", "0", "500"])
+    assert run.call_args.args[0][:2] == ["/bin/inputHandler", "108181935"]

@@ -1,8 +1,6 @@
 import re
 from src.lapis.api.services.encryption.encryption import decrypt, generate_hash
 # from src.lapis.helpers.features import *
-import hashlib
-import struct
 from src.lapis.helpers.features import STRUCTURES, BIOMES
 
 MAX_HORIZONTAL = 30_000_000
@@ -121,16 +119,31 @@ def validate_seed(seed: str):
     printableCharacters = r'^[\w\s!"#$%&\'()*+,\-./:;<=>?@[\\\]^_`{|}~]+$'
     return 1 <= len(seed.replace(" ", "")) <= MAX_SEED_LENGTH and re.match(printableCharacters, seed) is not None
 
-def to_minecraft_seed(seedValue: str):
+INT64_MIN, INT64_MAX = -2**63, 2**63 - 1
+
+def java_string_hash(text: str) -> int:
+    """
+    Java's String.hashCode(): h = 31*h + c over the UTF-16 code units, kept to a signed 32-bit int.
+    "hello" -> 99162322, the same number Java gives.
+    """
+    utf16 = text.encode("utf-16-be")
+    h = 0
+    for i in range(0, len(utf16), 2):
+        h = (31 * h + int.from_bytes(utf16[i:i + 2], "big")) & 0xFFFFFFFF
+    return h - 2**32 if h >= 2**31 else h
+
+def to_minecraft_seed(seedValue: str) -> str:
+    """
+    Turns what a player typed into the number Minecraft Java Edition uses for that world:
+      "12345"   -> "12345"  (a whole number that fits in a 64-bit long is used as-is)
+      "glacier" -> its Java hashCode, as Minecraft does for any seed that isn't such a number
+    Running it on its own output changes nothing, so it's safe to apply when reading as well as saving.
+    """
     seedValue = seedValue.strip()
-    if re.fullmatch(r'-?\d+', seedValue) is not None:
-        # numbers that can be passed in like 35 are already valid MC seeds
-        return seedValue
-    else:
-        # If not a number, hash it with SHA-256 so the C code always receives a number
-        hash_bytes = hashlib.sha256(seedValue.encode('utf-8')).digest()
-        # Take the first 8 bytes and convert to signed 64-bit integer
-        return str(struct.unpack('>q', hash_bytes[:8])[0])
+    if re.fullmatch(r'-?\d+', seedValue) is not None and INT64_MIN <= int(seedValue) <= INT64_MAX:
+        return str(int(seedValue))
+    # numbers too big for a long fail Java's Long.parseLong too, so Minecraft hashes those as text
+    return str(java_string_hash(seedValue))
 
 # inputHandler.c looks features up by the exact cubiomes enum name:
 #   structures keep their capitals -> "Desert_Pyramid"

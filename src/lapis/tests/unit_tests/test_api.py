@@ -182,3 +182,24 @@ def test_seed_lambda_without_a_saved_seed_is_a_404():
     with patch("src.lapis.api.seed_impl.connectToInputHandler", side_effect=NotFoundError("World seed not found for this user.")):
         status, body = seed_call({"Author_ID": "123", "requestType": "nearest", "feature": "village", "x_coord": "0", "z_coord": "0", "radius": "100"})
     assert (status, body) == (404, {"Error": "World seed not found for this user."})
+
+# ---------- deployment safety ----------
+import subprocess, sys, os, logging
+
+def test_the_lambda_entry_file_registers_every_route_by_itself():
+    # Lambda imports only db_lambda.py; run that alone in a fresh interpreter, the way AWS does
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
+    code = "from src.lapis.api import db_lambda; from src.lapis.api.router import router; print(len(router.routes))"
+    out = subprocess.run([sys.executable, "-c", code], cwd=repo_root, capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr
+    assert int(out.stdout.strip().splitlines()[-1]) >= 10
+
+def test_logs_never_contain_location_data(fakes, caplog, capsys):
+    caplog.set_level(logging.DEBUG)
+    fakes["db"].list_locations.return_value = {"Items": [{"Location_Name": "Secret Base", "Coordinates": "123,64,-456", "Location Type": "Nether"}]}
+    call("POST", "/locations", {"location_name": "Secret Base", "type": "Nether", "coords": "123, 64, -456"})
+    call("GET", "/locations")
+    call("GET", "/locations/Secret%20Base")
+    logged = caplog.text + capsys.readouterr().out
+    assert "Secret" not in logged and "123" not in logged and "-456" not in logged
+    assert "GET /locations/{name} -> " in logged

@@ -2,6 +2,7 @@ import subprocess
 import json
 import os
 from src.lapis.api.services.db.db_services import retrieve_seed
+from src.lapis.helpers.utils import to_minecraft_seed
 
 # spawn_near can scan up to a million seeds. The seed Lambda is killed after 10 seconds
 # (FormationTemplate.YAML), so stop a little earlier and answer with a readable error instead.
@@ -16,7 +17,8 @@ def connectToInputHandler(author_id: str, args: list[str]) -> list[dict]:
     """
     # replacing cache fn, refer to cache.py to see why
     # retrieve_seed returns the decrypted, numeric seed string
-    seed = retrieve_seed(author_id)
+    # seeds saved by older versions may still be the text the player typed; convert those the way Minecraft does
+    seed = to_minecraft_seed(retrieve_seed(author_id))
     executable = os.getenv("EXECUTABLE_NAME")
     if not executable:
         raise ValueError("EXECUTABLE_NAME is not set, so the seed tools can't be run.")

@@ -93,7 +93,7 @@ async def create_image(author_id: str, location_name: str, image):
         return {"msg": f"Saved image for location '{location_name}'.", "imageUrl": image_url}
     else:
         msg = f"Failed to save image URL for location '{location_name}'."
-        logger.error(msg)
+        logger.error("Failed to save an image URL")
         raise DataAccessError(msg)
 
 def create_location_update(author_id: str, location_name: str, new_coords: str):
@@ -110,7 +110,7 @@ def create_location_update(author_id: str, location_name: str, new_coords: str):
         return decrypt(res['Attributes']['Coordinates']).decode()
     else:
         msg = f"Location '{location_name}' not found or update failed."
-        logger.error(msg)
+        logger.error("Location update failed")
         raise DataAccessError(msg)
 
 def retrieve_location(author_id: str, location_name: str):
@@ -165,11 +165,11 @@ def delete_location_attempt(author_id: str, location_name: str):
             try:
                 deleteImageObject(decrypt(image_url_encrypted).decode())
             except Exception as e:
-                logger.error(f"Deleted location '{location_name}' but not its image: {e}")
+                logger.error(f"Deleted a location but not its image: {type(e).__name__}")
         return f"Successfully deleted location '{location_name}'."
     else:
         msg = f"Location '{location_name}' not found."
-        logger.error(msg)
+        logger.info("Delete of a location that doesn't exist")
         raise NotFoundError(msg)
 
 async def delete_image_url_attempt(author_id: str, location_name: str):
