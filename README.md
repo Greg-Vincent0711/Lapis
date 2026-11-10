@@ -16,3 +16,20 @@ To use the lib and compile programs:
 2. Run `make`
 3. `cd ../../src/SeedInfoFns`
 4. Run `make`
+
+## Deploying the backend
+
+All AWS resources are defined in [src/lapis/FormationTemplate.YAML](src/lapis/FormationTemplate.YAML) (stack `LapisBackend`, us-east-1). From the repo root:
+
+```bash
+./deploy.sh --preview   # run the tests, build and upload the code, show what would change; changes nothing
+./deploy.sh             # same, then asks before applying
+```
+
+The script reads the Discord client secret from `CLIENT_SECRET` in `.env`, and refuses any change that would delete or replace the DynamoDB table or the S3 bucket. `src/lapis/inputHandler` must be the Linux ARM build that Lambda runs. When the website is hosted, add its domain:
+
+```bash
+SITE_ORIGINS="http://localhost:5173,https://<site>" DISCORD_REDIRECT_URI="https://<site>/auth/callback" ./deploy.sh
+```
+
+The Fernet encryption key, the Cognito user pool and the Python dependencies layer are deliberately kept outside the stack and passed in as parameters, so no stack change can delete them.
