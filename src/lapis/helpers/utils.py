@@ -1,10 +1,7 @@
 import re
 from src.lapis.api.services.encryption.encryption import decrypt, generate_hash
 # from src.lapis.helpers.features import *
-import hashlib
-import struct
-import discord
-from discord import app_commands
+from src.lapis.helpers.features import STRUCTURES, BIOMES
 
 MAX_HORIZONTAL = 30_000_000
 MAX_SEED_LENGTH = 64
@@ -77,47 +74,31 @@ def isCorrectCoordFormat(coordinates: str) -> str | bool:
     
 #     return decryptedLocations
 def extract_decrypted_locations(encryptedData):
-    print(f"Total entries to process: {len(encryptedData)}")
+    """
+    Turns the raw rows for one user into a list of plain location dicts.
+    Rows without a name and coordinates (the profile row, the seed row) aren't locations and are skipped.
+    """
     decryptedLocations = []
-    
-    for i, entry in enumerate(encryptedData):
-        print(f"\n--- Entry {i} ---")
-        print(f"Keys in entry: {list(entry.keys())}")
-        
-        if entry.get("Location") == "__PROFILE__":
-            print("Skipping __PROFILE__")
+    for entry in encryptedData:
+        location_name_encrypted = entry.get("Location_Name")
+        coordinates_encrypted = entry.get("Coordinates")
+        if not location_name_encrypted or not coordinates_encrypted:
             continue
-        
         try:
-            # Check if required keys exist
-            location_name_encrypted = entry.get("Location_Name")
-            coordinates_encrypted = entry.get("Coordinates")
+            # locations saved before types existed have no "Location Type"
             type_encrypted = entry.get("Location Type")
-            
-            print(f"Location_Name exists: {location_name_encrypted is not None}")
-            print(f"Coordinates exists: {coordinates_encrypted is not None}")
-            print(f"Location Type exists: {type_encrypted is not None}")
-            
-            # Skip entries missing required fields
-            if not all([location_name_encrypted, coordinates_encrypted, type_encrypted]):
-                print(f"⚠️ Skipping entry {i} - missing required fields")
-                continue
-            
             decryptedLocations.append({
                 "Location_Name": decrypt(location_name_encrypted).decode(),
                 "Coordinates": decrypt(coordinates_encrypted).decode(),
-                "Type": decrypt(type_encrypted).decode()
+                "Type": decrypt(type_encrypted).decode() if type_encrypted else "Overworld"
             })
-            print(f"✓ Successfully decrypted entry {i}")
-            
+            image_encrypted = entry.get("Image_URL")
+            if image_encrypted:
+                decryptedLocations[-1]["Image_URL"] = decrypt(image_encrypted).decode()
         except Exception as e:
-            print(f"❌ ERROR on entry {i}: {type(e).__name__}: {e}")
-            # Option A: Skip bad entries instead of failing entirely
+            # one unreadable row shouldn't hide the rest of the user's locations
+            print(f"Skipping a location that could not be decrypted: {type(e).__name__}: {e}")
             continue
-            # Option B: Fail on first error (current behavior)
-            # raise NotFoundError(f"Failed to decrypt entry {i}. Error: {e}")
-    
-    print(f"\nTotal decrypted: {len(decryptedLocations)} out of {len([e for e in encryptedData if e.get('Location') != '__PROFILE__'])} non-profile entries")
     return decryptedLocations
 
 
@@ -138,23 +119,54 @@ def validate_seed(seed: str):
     printableCharacters = r'^[\w\s!"#$%&\'()*+,\-./:;<=>?@[\\\]^_`{|}~]+$'
     return 1 <= len(seed.replace(" ", "")) <= MAX_SEED_LENGTH and re.match(printableCharacters, seed) is not None
 
-def to_minecraft_seed(seedValue: str):
-    if re.match(r'\d+', seedValue) is not None:
-        # numbers that can be passed in like 35 are already valid MC seeds
-        return seedValue
-    else:
-        # If not a number, hash it using SHA-256 like Minecraft does
-        hash_bytes = hashlib.sha256(seedValue.encode('utf-8')).digest()
-        # Take the first 8 bytes and convert to signed 64-bit integer
-        return str(struct.unpack('>q', hash_bytes[:8])[0])
+INT64_MIN, INT64_MAX = -2**63, 2**63 - 1
+
+def java_string_hash(text: str) -> int:
+    """
+    Java's String.hashCode(): h = 31*h + c over the UTF-16 code units, kept to a signed 32-bit int.
+    "hello" -> 99162322, the same number Java gives.
+    """
+    utf16 = text.encode("utf-16-be")
+    h = 0
+    for i in range(0, len(utf16), 2):
+        h = (31 * h + int.from_bytes(utf16[i:i + 2], "big")) & 0xFFFFFFFF
+    return h - 2**32 if h >= 2**31 else h
+
+def to_minecraft_seed(seedValue: str) -> str:
+    """
+    Turns what a player typed into the number Minecraft Java Edition uses for that world:
+      "12345"   -> "12345"  (a whole number that fits in a 64-bit long is used as-is)
+      "glacier" -> its Java hashCode, as Minecraft does for any seed that isn't such a number
+    Running it on its own output changes nothing, so it's safe to apply when reading as well as saving.
+    """
+    seedValue = seedValue.strip()
+    if re.fullmatch(r'-?\d+', seedValue) is not None and INT64_MIN <= int(seedValue) <= INT64_MAX:
+        return str(int(seedValue))
+    # numbers too big for a long fail Java's Long.parseLong too, so Minecraft hashes those as text
+    return str(java_string_hash(seedValue))
+
+# inputHandler.c looks features up by the exact cubiomes enum name:
+#   structures keep their capitals -> "Desert_Pyramid"
+#   biomes are lowercase           -> "frozen_ocean"
+# users may type any casing, with spaces, dashes or underscores
+def _normalize_feature(feature: str) -> str:
+    return re.sub(r'[\s_\-]+', ' ', feature.strip().lower())
+
+_STRUCTURE_NAMES = {_normalize_feature(name): name.replace(" ", "_") for name in STRUCTURES}
+UNUSED_FEATURE = "None"
+
+def is_structure(feature: str) -> bool:
+    return bool(feature) and _normalize_feature(feature) in _STRUCTURE_NAMES
 
 # feature is either a structure or biome
-def format_feature(feature: str):
-    if feature in STRUCTURES:
-        feature = feature.replace(" ", "-")
-    elif feature in BIOMES:
-        feature = feature.lower().replace(" ", "-")
-    return feature
+def format_feature(feature: str | None) -> str:
+    if not feature or _normalize_feature(feature) == "none":
+        # spawnNear.c treats the literal "None" as "this filter is unused"
+        return UNUSED_FEATURE
+    normalized = _normalize_feature(feature)
+    if normalized in _STRUCTURE_NAMES:
+        return _STRUCTURE_NAMES[normalized]
+    return normalized.replace(" ", "_")
 
 
 '''

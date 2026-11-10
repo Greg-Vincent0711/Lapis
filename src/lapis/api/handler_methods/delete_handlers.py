@@ -12,7 +12,7 @@ def delete_location_handler(request: APIRequest) -> APIResponse:
         if not location_name:
             return APIResponse(400, "location_name is required")
         res = delete_location_attempt(request.author_id, location_name)
-        return APIResponse(201, res)
+        return APIResponse(200, res)
     except UnauthorizedError as e:
         return APIResponse(e.status_code, e.message)
     except ValidationError as e:
@@ -29,7 +29,7 @@ async def delete_image_url_handler(request: APIRequest) -> APIResponse:
         if not location_name:
             return APIResponse(400, "location_name is required")
         res = await delete_image_url_attempt(request.author_id, location_name)
-        return APIResponse(201, res)
+        return APIResponse(200, res)
     except UnauthorizedError as e:
         return APIResponse(e.status_code, e.message)
     except ValidationError as e:

@@ -1,6 +1,7 @@
 # Refactor this as well
 import json
 from src.lapis.api.seed_impl import *
+from src.lapis.api.middleware.errors import APIError
 
 def response(status_code: int, body: dict):
     """
@@ -52,6 +53,9 @@ def handler(event, context):
         else:
             return response(405, {"Error": f"Method not allowed. No handler for method={method}."})
     
+    except APIError as e:
+        # e.g. 404 when the user hasn't saved a seed yet
+        return response(e.status_code, {"Error": e.message})
     except Exception as e:
         print(f"Error caught when using seed routes: {e}")
         return response(500, {"Error": str(e)})

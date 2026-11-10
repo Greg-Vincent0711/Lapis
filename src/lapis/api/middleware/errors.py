@@ -24,6 +24,10 @@ class InvalidLocationError(APIError):
     def __init__(self, message: str = "Invalid location"):
         super().__init__(message, 404)
 
+class ConflictError(APIError):
+    def __init__(self, message: str):
+        super().__init__(message, 409)
+
 class ValidationError(APIError):
     def __init__(self, message: str):
         super().__init__(message, 400)
@@ -45,8 +49,7 @@ def error_handler_middleware(handler):
         except APIError as e:
             return APIResponse(e.status_code, {"error": e.message}).to_lambda_response()
         except Exception as e:
-            print(f"Unexpected error: {e}")
-            import traceback
-            traceback.print_exc()
+            # type only: the message can contain user data
+            print(f"Unexpected error: {type(e).__name__}")
             return APIResponse(500, {"error": "Internal server error"}).to_lambda_response()
     return wrapper

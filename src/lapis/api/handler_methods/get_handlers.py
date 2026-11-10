@@ -1,12 +1,11 @@
 from src.lapis.api.models.http_models import APIRequest, APIResponse
-from src.lapis.api.repositories.db import *
 from src.lapis.api.services.db.db_services import *
 from src.lapis.api.router import router
 
 def get_seed_handler(request: APIRequest) -> APIResponse:
     try:
         seed = retrieve_seed(request.author_id)
-        return APIResponse(202, {"seed": seed})
+        return APIResponse(200, {"seed": seed})
     except UnauthorizedError as e:
         return APIResponse(e.status_code, e.message)
     except NotFoundError as e:
@@ -38,6 +37,7 @@ def get_locations_handler(request: APIRequest) -> APIResponse:
         return APIResponse(200, {"locations": locations})
     except UnauthorizedError as e:
         return APIResponse(e.status_code, e.message)
-    except NotFoundError as e:
-        return APIResponse(e.status_code, e.message)
+    except NotFoundError:
+        # a linked user with nothing saved yet is not an error for the website
+        return APIResponse(200, {"locations": []})
 router.register("GET", "/locations", get_locations_handler)

@@ -1,42 +1,116 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Lapis' Cloudformation Template
+Description: >
+  Lapis backend: DynamoDB table, S3 bucket for images and Lambda code, the DB Lambda behind an
+  HTTP API with a Cognito JWT authorizer, and the seed-tools Lambda. Deploy with ./deploy.sh.
+
+# Things CloudFormation does NOT create, and why:
+#   - The Fernet encryption key (Secrets Manager secret named by FernetSecretName). Every saved
+#     location is encrypted with it; if a stack change ever deleted it, all data would be unreadable.
+#   - The Cognito user pool the website signs in with.
+#   - The Lambda layer holding the Python dependencies.
+# They are passed in as parameters instead.
+
+Parameters:
+  DBCodeKey:
+    Type: String
+    Description: S3 key of the DB Lambda zip in the stack's bucket (deploy.sh uploads it with a unique name).
+  SeedCodeKey:
+    Type: String
+    Description: S3 key of the seed Lambda zip in the stack's bucket.
+  DependenciesLayerArn:
+    Type: String
+    Default: arn:aws:lambda:us-east-1:444277859488:layer:lambda-dependencies:1
+    Description: Layer with requests, cryptography, attrs, aws-secretsmanager-caching (built for arm64).
+  FernetSecretName:
+    Type: String
+    Default: LapisFernetSecret
+  CognitoUserPoolId:
+    Type: String
+    Default: us-east-1_ytzLAQXvz
+  CognitoAppClientId:
+    Type: String
+    Default: 4fv4br59s8ub1gt7hmmhkfi5sv
+    Description: The website's Cognito app client; API Gateway only accepts ID tokens issued to it.
+  DiscordClientId:
+    Type: String
+    Default: "1342331009336868915"
+  DiscordClientSecret:
+    Type: String
+    NoEcho: true
+    Description: Discord OAuth client secret. Never commit it; deploy.sh reads it from .env.
+  DiscordRedirectUri:
+    Type: String
+    Default: http://localhost:5173/auth/callback
+    Description: Must match the redirect the website sends to Discord and the Discord developer portal.
+  SiteOrigins:
+    Type: CommaDelimitedList
+    Default: http://localhost:5173,http://localhost:5174,http://localhost:5175
+    Description: Origins the browser may call the API from. Add the website's domain when it's hosted.
 
 Resources:
+  # ---------- storage ----------
   LapisCodeAndImages:
     Type: AWS::S3::Bucket
+    # holds every uploaded image; never delete it along with the stack
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       BucketName: !Sub "lapis-memory-${AWS::AccountId}"
+      # Leave this line exactly as is. The stack was created with it; removing it makes CloudFormation
+      # try to reset the bucket's ACL, which fails because ACLs are disabled (BucketOwnerEnforced).
       AccessControl: Private
+      VersioningConfiguration:
+        Status: Enabled
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      # ACLs are off; only the bucket policy below makes anything public
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: false
+        RestrictPublicBuckets: false
+      LifecycleConfiguration:
+        Rules:
+          # versioning keeps a hidden copy of every replaced or deleted file; drop those after 30 days
+          - Id: ExpireOldVersions
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 30
 
-  CloudFormationExecutionRole:
-    Type: AWS::IAM::Role
+  LapisImagesPublicRead:
+    Type: AWS::S3::BucketPolicy
+    # imported into the stack on 2026-11-10 (it was created by hand first)
+    DeletionPolicy: Retain
     Properties:
-      AssumeRolePolicyDocument:
+      Bucket: !Ref LapisCodeAndImages
+      PolicyDocument:
         Version: "2012-10-17"
         Statement:
-          - Effect: Allow
-            Action: sts:AssumeRole
-            Principal:
-              Service: cloudformation.amazonaws.com
-      Policies:
-        - PolicyName: CloudFormationFullAccessPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action: "*"
-                Resource: "*"
+          # images are shown in Discord embeds and on the website, so uploads/ is readable by URL.
+          # Lambda code zips (lambda/) stay private.
+          - Sid: AllowPublicReadAccessToUploads
+            Effect: Allow
+            Principal: "*"
+            Action: s3:GetObject
+            Resource: !Sub "${LapisCodeAndImages.Arn}/uploads/*"
 
   LapisTable:
     Type: AWS::DynamoDB::Table
+    # every user's saved locations live here; it must survive any stack mistake
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: LapisData
+      DeletionProtectionEnabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
       AttributeDefinitions:
         - AttributeName: Author_ID
           AttributeType: S
         - AttributeName: Location
           AttributeType: S
-        - AttributeName: cognito_user_id 
+        - AttributeName: cognito_user_id
           AttributeType: S
       KeySchema:
         - AttributeName: Author_ID
@@ -44,6 +118,7 @@ Resources:
         - AttributeName: Location
           KeyType: RANGE
       GlobalSecondaryIndexes:
+        # finds a website user's Discord id from their Cognito id
         - IndexName: cognito-index
           KeySchema:
             - AttributeName: cognito_user_id
@@ -52,7 +127,7 @@ Resources:
             ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
 
-  # Lambda Roles
+  # ---------- permissions (least privilege) ----------
   LapisDBLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -62,10 +137,8 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service: 
-                - lambda.amazonaws.com
-            Action: 
-              - sts:AssumeRole
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
       Policies:
         - PolicyName: LapisPolicy
           PolicyDocument:
@@ -76,7 +149,7 @@ Resources:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-                Resource: arn:aws:logs:*:*:*
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/LapisDBFn:*"
               - Effect: Allow
                 Action:
                   - dynamodb:PutItem
@@ -84,24 +157,20 @@ Resources:
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
                   - dynamodb:Query
-                Resource: 
+                Resource:
                   - !GetAtt LapisTable.Arn
                   - !Sub "${LapisTable.Arn}/index/*"
               - Effect: Allow
                 Action:
                   - s3:PutObject
                   - s3:GetObject
-                Resource: !Sub "arn:aws:s3:::${LapisCodeAndImages}/*"
+                  - s3:DeleteObject
+                Resource: !Sub "${LapisCodeAndImages.Arn}/uploads/*"
               - Effect: Allow
                 Action:
                   - secretsmanager:GetSecretValue
                   - secretsmanager:DescribeSecret
-                Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:LapisFernetSecret*"
-
-              - Effect: Allow
-                Action:
-                  - secretsmanager:CreateSecret
-                Resource: "*"
+                Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${FernetSecretName}*"
 
   LapisSeedLambdaRole:
     Type: AWS::IAM::Role
@@ -112,10 +181,8 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - sts:AssumeRole
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
       Policies:
         - PolicyName: LapisSeedPolicy
           PolicyDocument:
@@ -126,7 +193,8 @@ Resources:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-                Resource: arn:aws:logs:*:*:*
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/LapisSeedFn:*"
+              # only reads the user's saved seed
               - Effect: Allow
                 Action:
                   - dynamodb:GetItem
@@ -135,58 +203,61 @@ Resources:
                 Action:
                   - secretsmanager:GetSecretValue
                   - secretsmanager:DescribeSecret
-                Resource: "*"
+                Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${FernetSecretName}*"
 
-              - Effect: Allow
-                Action:
-                  - secretsmanager:CreateSecret
-                Resource: "*"
-
-
-  # Lambda Functions
+  # ---------- Lambda functions ----------
   LapisDBFn:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: LapisDBFn
+      Description: Saved locations, images, seeds and Discord linking for the website (HTTP API).
       Runtime: python3.11
-      Handler: db_lambda.handler
+      Architectures: [arm64]
+      Handler: src/lapis/api/db_lambda.handler
       Role: !GetAtt LapisDBLambdaRole.Arn
-      Timeout: 10
+      # API Gateway gives up after 30 seconds, so a longer Lambda timeout would only waste time
+      Timeout: 30
       MemorySize: 256
+      Layers:
+        - !Ref DependenciesLayerArn
       Environment:
         Variables:
           TABLE_NAME: !Ref LapisTable
           BUCKET_NAME: !Ref LapisCodeAndImages
-          SECRET_NAME: !Ref LapisFernetKey
+          SECRET_NAME: !Ref FernetSecretName
+          CLIENT_ID: !Ref DiscordClientId
+          CLIENT_SECRET: !Ref DiscordClientSecret
+          REDIRECT_URI: !Ref DiscordRedirectUri
       Code:
         S3Bucket: !Ref LapisCodeAndImages
-        S3Key: DB_lambda.zip
+        S3Key: !Ref DBCodeKey
 
   LapisSeedFn:
     Type: AWS::Lambda::Function
+    # Not routed through API Gateway: the Discord bot runs the seed tools itself. Kept deployed so a
+    # JWT-protected route can be added later without rebuilding anything.
     Properties:
       FunctionName: LapisSeedFn
+      Description: Runs the cubiomes seed tools (nearest biome/structure, spawn-near) on a user's seed.
       Runtime: python3.11
-      Handler: seed_lambda.handler
+      # the bundled inputHandler binary is built for Linux ARM
+      Architectures: [arm64]
+      Handler: src/lapis/api/seed_lambda.handler
       Role: !GetAtt LapisSeedLambdaRole.Arn
-      Timeout: 10
-      MemorySize: 256
+      Timeout: 20
+      # Lambda CPU scales with memory; the C searches need the extra speed
+      MemorySize: 1024
+      Layers:
+        - !Ref DependenciesLayerArn
       Environment:
         Variables:
-          SECRET_NAME: !Ref LapisFernetKey
           TABLE_NAME: !Ref LapisTable
+          SECRET_NAME: !Ref FernetSecretName
           EXECUTABLE_NAME: ./src/lapis/inputHandler
       Code:
         S3Bucket: !Ref LapisCodeAndImages
-        S3Key: seed_lambda.zip
+        S3Key: !Ref SeedCodeKey
 
-  LapisFernetKey:
-    Type: AWS::SecretsManager::Secret
-    Properties:
-      Name: LapisAppSecret
-      Description: "Fernet key for Lapis' CSE"
-
-  # Log groups
   LapisDBFnLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -199,110 +270,159 @@ Resources:
       LogGroupName: !Sub "/aws/lambda/${LapisSeedFn}"
       RetentionInDays: 14
 
-  # API Gateway
-  LapisHttpApi:
+  # ---------- HTTP API ----------
+  # Replaced the hand-built LapisHttpApi (ccuvznal88) on 2026-11-10 so every route lives in this file.
+  LapisApi:
     Type: AWS::ApiGatewayV2::Api
     Properties:
-      Name: LapisHttpApi
+      Name: LapisApi
       ProtocolType: HTTP
       CorsConfiguration:
-        AllowOrigins:
-          - "*"
-        AllowMethods:
-          - GET
-          - POST
-          - OPTIONS
-          - DELETE
-          - PUT
-        AllowHeaders:
-          - "*"
+        AllowOrigins: !Ref SiteOrigins
+        AllowCredentials: true
+        AllowMethods: [GET, POST, PUT, DELETE, OPTIONS]
+        AllowHeaders: [content-type, authorization, x-requested-with]
+        MaxAge: 600
 
-  # Lambda integrations
+  # every route requires a valid Cognito ID token issued to the website's app client
+  LapisAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      ApiId: !Ref LapisApi
+      Name: LapisAuth
+      AuthorizerType: JWT
+      IdentitySource:
+        - "$request.header.Authorization"
+      JwtConfiguration:
+        Issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${CognitoUserPoolId}"
+        Audience:
+          - !Ref CognitoAppClientId
+
   DBIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
-      ApiId: !Ref LapisHttpApi
+      ApiId: !Ref LapisApi
       IntegrationType: AWS_PROXY
-      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LapisDBFn.Arn}/invocations
+      IntegrationUri: !GetAtt LapisDBFn.Arn
       PayloadFormatVersion: "2.0"
+      TimeoutInMillis: 30000
 
-  SeedIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref LapisHttpApi
-      IntegrationType: AWS_PROXY
-      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LapisSeedFn.Arn}/invocations
-      PayloadFormatVersion: "2.0"
-
-  # API Gateway Routes
-  SeedGETRoute:
+  ListLocationsRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
-      ApiId: !Ref LapisHttpApi
-      RouteKey: "GET /seedInfo"
-      Target: !Sub integrations/${SeedIntegration}
+      ApiId: !Ref LapisApi
+      RouteKey: "GET /locations"
+      AuthorizationType: JWT
+      AuthorizerId: !Ref LapisAuthorizer
+      Target: !Sub "integrations/${DBIntegration}"
 
-  DBPOSTRoute:
+  SaveLocationRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
-      ApiId: !Ref LapisHttpApi
-      RouteKey: "POST /items"
-      Target: !Sub integrations/${DBIntegration}
+      ApiId: !Ref LapisApi
+      RouteKey: "POST /locations"
+      AuthorizationType: JWT
+      AuthorizerId: !Ref LapisAuthorizer
+      Target: !Sub "integrations/${DBIntegration}"
 
-  DBGETRoute:
+  GetLocationRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
-      ApiId: !Ref LapisHttpApi
-      RouteKey: "GET /items"
-      Target: !Sub integrations/${DBIntegration}
+      ApiId: !Ref LapisApi
+      RouteKey: "GET /locations/{location_name}"
+      AuthorizationType: JWT
+      AuthorizerId: !Ref LapisAuthorizer
+      Target: !Sub "integrations/${DBIntegration}"
 
-  DBDELETERoute:
+  UpdateLocationRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
-      ApiId: !Ref LapisHttpApi
-      RouteKey: "DELETE /items"
-      Target: !Sub integrations/${DBIntegration}
+      ApiId: !Ref LapisApi
+      RouteKey: "PUT /locations/{location_name}"
+      AuthorizationType: JWT
+      AuthorizerId: !Ref LapisAuthorizer
+      Target: !Sub "integrations/${DBIntegration}"
 
-  DBPUTRoute:
+  DeleteLocationRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
-      ApiId: !Ref LapisHttpApi
-      RouteKey: "PUT /items"
-      Target: !Sub integrations/${DBIntegration}
+      ApiId: !Ref LapisApi
+      RouteKey: "DELETE /locations/{location_name}"
+      AuthorizationType: JWT
+      AuthorizerId: !Ref LapisAuthorizer
+      Target: !Sub "integrations/${DBIntegration}"
+
+  SaveImageRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref LapisApi
+      RouteKey: "PUT /locations/{location_name}/img"
+      AuthorizationType: JWT
+      AuthorizerId: !Ref LapisAuthorizer
+      Target: !Sub "integrations/${DBIntegration}"
+
+  DeleteImageRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref LapisApi
+      RouteKey: "DELETE /locations/{location_name}/img"
+      AuthorizationType: JWT
+      AuthorizerId: !Ref LapisAuthorizer
+      Target: !Sub "integrations/${DBIntegration}"
+
+  GetSeedRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref LapisApi
+      RouteKey: "GET /seed"
+      AuthorizationType: JWT
+      AuthorizerId: !Ref LapisAuthorizer
+      Target: !Sub "integrations/${DBIntegration}"
+
+  SetSeedRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref LapisApi
+      RouteKey: "POST /seed"
+      AuthorizationType: JWT
+      AuthorizerId: !Ref LapisAuthorizer
+      Target: !Sub "integrations/${DBIntegration}"
+
+  # links a signed-in website user to their Discord account (the JWT says who they are)
+  DiscordCallbackRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref LapisApi
+      RouteKey: "POST /auth/callback"
+      AuthorizationType: JWT
+      AuthorizerId: !Ref LapisAuthorizer
+      Target: !Sub "integrations/${DBIntegration}"
 
   LapisHttpStage:
     Type: AWS::ApiGatewayV2::Stage
     Properties:
-      ApiId: !Ref LapisHttpApi
+      ApiId: !Ref LapisApi
       StageName: prod
+      # route and CORS changes go live as soon as the stack updates
       AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 50
+        ThrottlingRateLimit: 25
 
-  # Lambda permissions
   LapisDBFnInvokePermission:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !Ref LapisDBFn
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${LapisHttpApi}/*/*/*
-
-  LapisSeedFnInvokePermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref LapisSeedFn
-      Action: lambda:InvokeFunction
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${LapisHttpApi}/*/*/*
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${LapisApi}/*/*/*"
 
 Outputs:
+  ApiUrl:
+    Description: Base URL for the website's VITE_APP_API_ENDPOINT.
+    Value: !Sub "https://${LapisApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
   S3BucketName:
-    Description: "Bucket for imgs users send to Lapis."
+    Description: Images (uploads/) and Lambda code (lambda/).
     Value: !Ref LapisCodeAndImages
-
   DynamoDBTableName:
-    Description: "Location data."
     Value: !Ref LapisTable
-
-  SecretARN:
-    Description: "ARN of Lapis' stored fernet key."
-    Value: !Ref LapisFernetKey

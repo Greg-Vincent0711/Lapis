@@ -4,6 +4,7 @@ Presentation Layer(http requests, responses)
 import asyncio
 import inspect
 from typing import Callable, Dict, Tuple
+from urllib.parse import unquote
 from src.lapis.api.models.http_models import APIRequest, APIResponse
 
 class Router:
@@ -92,9 +93,8 @@ class Router:
             if route_segment.startswith("{") and route_segment.endswith("}"):
                 # Extract parameter name (remove { and })
                 param_name = route_segment[1:-1]
-                params[param_name] = specific_path_segment
+                params[param_name] = unquote(specific_path_segment)
         
         return params
 
 router = Router()
-print("All routes",router.routes)

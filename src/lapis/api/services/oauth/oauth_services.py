@@ -25,9 +25,14 @@ def get_credentials_attempt(request: APIRequest, authCode: str = None):
     
     if not items:
         if not authCode:
-            raise UnauthorizedError("An authcode is required to retrieve the Discord author_id.")
-        accessToken = retrieveAccessToken(authCode)
-        author_id = getAuthorDataFromDiscord(accessToken["access_token"])["id"]
+            # signed in, but hasn't connected Discord yet: the website shows its "Connect to Discord" button on 403
+            raise ForbiddenError("Discord account not linked. Connect Discord first.")
+        try:
+            accessToken = retrieveAccessToken(authCode)
+            author_id = getAuthorDataFromDiscord(accessToken["access_token"])["id"]
+        except requests.exceptions.RequestException as e:
+            # expired or reused codes, or a REDIRECT_URI that doesn't match the one the website sent to Discord
+            raise UnauthorizedError("Discord rejected the authorization code. Try connecting again.") from e
         create_credentials(table, author_id, request.cognito_user_id)
         return author_id
     else:
