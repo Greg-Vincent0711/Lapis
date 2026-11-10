@@ -1,8 +1,10 @@
 saveDocString = '''
-    !save location_name "X Y Z"
+    !save location_name "X Y Z" [dimension]
         Use double quotes for any spaces.
-        !save Nether "34 -20 221"
-        !save "Nether Hub" "32 121 120"
+        Dimension is optional: Overworld (default), Nether or The End.
+        Attach a .png or .jpg to save an image with the location.
+        !save Home "34 -20 221"
+        !save "Nether Hub" "32 121 120" Nether
 ''' 
 getDocString = '''
     !get location_name.

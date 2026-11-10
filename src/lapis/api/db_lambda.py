@@ -9,7 +9,7 @@
 '''
 
 from src.lapis.api.models.http_models import APIRequest, APIResponse
-from src.lapis.api.middleware.errors import error_handler_middleware
+from src.lapis.api.middleware.errors import error_handler_middleware, APIError
 from src.lapis.api.services.oauth.oauth_services import get_credentials_attempt
 # business logic and service stuff happens here in Router
 
@@ -46,6 +46,10 @@ def handler(event, context):
             response: APIResponse = router.route(request)
             print("Response sent from backend to lapis.site", response.to_lambda_response())
             return response.to_lambda_response()
+        return APIResponse(404, {"error": f"No route for {request.method} {request.path}"}).to_lambda_response()
+    except APIError as e:
+        # errors a handler didn't catch itself keep their real status code (401, 404, ...) instead of becoming a 500
+        return APIResponse(e.status_code, {"error": e.message}).to_lambda_response()
     except Exception as e:
         print(f"Handler error: {e}")
         return APIResponse(500, {"error": str(e)}).to_lambda_response()

@@ -1,66 +1,56 @@
-import os
-import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../..")))
-
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
-from src.lapis.lapis import InvalidImageFormatError, ImageDownloadError, S3UploadError
+from unittest.mock import patch, AsyncMock
 from src.lapis.lapis import saveImage
-from testing_utils import fake_ctx
+from src.lapis.api.middleware.errors import InvalidLocationError
+from src.lapis.helpers.exceptions import InvalidImageFormatError, ImageDownloadError, S3UploadError
+from testing_utils import fake_ctx, AUTHOR_ID
 
 @pytest.fixture
 def common_patches():
     with patch("src.lapis.lapis.makeErrorEmbed") as mock_makeErrorEmbed, \
-         patch("src.lapis.lapis.save_image_url", new_callable=AsyncMock) as mock_save_image_url, \
+         patch("src.lapis.lapis.create_image", new_callable=AsyncMock) as mock_create_image, \
          patch("src.lapis.lapis.makeEmbed") as mock_makeEmbed:
-            yield {
-                "makeErrorEmbed": mock_makeErrorEmbed,
-                "save_image_url": mock_save_image_url,
-                "makeEmbed": mock_makeEmbed
-            }
-            
-
-@pytest.mark.asyncio
-async def test_save_image_invalid_name(common_patches):
-    ctx = fake_ctx()
-    await saveImage(ctx, "A")
-    common_patches["makeErrorEmbed"].assert_called_once_with("Error", "Invalid name length. Must between 3 and 30 characters.")
-    ctx.send.assert_called_once()
-
+        yield {
+            "makeErrorEmbed": mock_makeErrorEmbed,
+            "create_image": mock_create_image,
+            "makeEmbed": mock_makeEmbed,
+        }
 
 @pytest.mark.asyncio
 async def test_save_image_from_bot_ignored(common_patches):
     ctx = fake_ctx(is_bot=True)
     await saveImage(ctx, "HomeBase")
     common_patches["makeErrorEmbed"].assert_called_once_with("Error", "Ignoring message from bot.")
+    common_patches["create_image"].assert_not_called()
     ctx.send.assert_called_once()
 
+@pytest.mark.asyncio
+async def test_save_image_without_attachment(common_patches):
+    ctx = fake_ctx(with_attachment=False)
+    await saveImage(ctx, "HomeBase")
+    common_patches["create_image"].assert_not_called()
+    assert "Attach" in common_patches["makeErrorEmbed"].call_args.args[1]
+    ctx.send.assert_called_once()
 
 @pytest.mark.asyncio
 async def test_save_image_success(common_patches):
     ctx = fake_ctx()
-    common_patches["save_image_url"].return_value = "Saved an image URL for your location."
+    common_patches["create_image"].return_value = {"msg": "Saved.", "imageUrl": "https://bucket.s3.amazonaws.com/uploads/123/a.png"}
     await saveImage(ctx, "NetherBase")
-    common_patches["save_image_url"].assert_awaited_once_with(ctx.author.id, "NetherBase", ctx.message)
-    common_patches["makeEmbed"].assert_called_once_with(title="Success!", description="Saved an image URL for your location.")
+    # the attachment itself is handed over, not the whole Discord message
+    common_patches["create_image"].assert_awaited_once_with(AUTHOR_ID, "NetherBase", ctx.message.attachments[0])
+    kwargs = common_patches["makeEmbed"].call_args.kwargs
+    assert kwargs["title"] == "Success!"
+    assert kwargs["url"] == "https://bucket.s3.amazonaws.com/uploads/123/a.png"
     ctx.send.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_save_image_db_fail(common_patches):
-    ctx = fake_ctx()
-    common_patches["save_image_url"].return_value = None
-    await saveImage(ctx, "HomeBase")
-    common_patches["makeErrorEmbed"].assert_called_once_with("Image not saved", "Failed to update the database. Try again later.")
-    ctx.send.assert_called_once()
-
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("exception", [ValueError("Bad value"), InvalidImageFormatError("Bad format"),
-                                       ImageDownloadError("Download failed"), S3UploadError("S3 failed")])
+                                       ImageDownloadError("Download failed"), S3UploadError("S3 failed"),
+                                       InvalidLocationError("Location 'HomeBase' not found.")])
 async def test_save_image_exceptions(common_patches, exception):
     ctx = fake_ctx()
-    common_patches["save_image_url"].side_effect = exception
+    common_patches["create_image"].side_effect = exception
     await saveImage(ctx, "HomeBase")
     common_patches["makeErrorEmbed"].assert_called_once_with("Error saving your image.", str(exception))
     ctx.send.assert_called_once()

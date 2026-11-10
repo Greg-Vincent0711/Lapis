@@ -1,5 +1,5 @@
 import boto3
-from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Key, Attr
 from botocore.exceptions import ClientError
 from src.lapis.api.repositories.s3_fns import storeImageInS3, deleteImage
 from src.lapis.api.services.encryption.encryption import encrypt, decrypt, generate_hash
@@ -25,11 +25,17 @@ def get_location_count(author_id: str):
     # Get table
     table = get_table()
     # Query for all user locations for an author_id
+    # the profile and seed rows share the partition but have no Coordinates, so they aren't counted
     response = table.query(
-        KeyConditionExpression=Key('Author_ID').eq(author_id),
+        KeyConditionExpression=Key('Author_ID').eq(str(author_id)),
+        FilterExpression=Attr('Coordinates').exists(),
         Select='COUNT'
     )
     return response['Count']
+
+# DynamoDB raises this code when a ConditionExpression isn't met (i.e. the row we expected isn't there)
+def _condition_failed(e: ClientError) -> bool:
+    return e.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException"
 
 def get_credentials(table, cognito_user_id: str) -> str:
     try:
@@ -69,10 +75,14 @@ def save_location(author_id: str, location_name: str, location_type: str, coords
                 "Location_Name": encrypt(location_name).decode(),
                 "Location Type": encrypt(location_type).decode(),
                 "Coordinates": encrypt(coords).decode(),
-            }
+            },
+            # put_item would otherwise silently replace a saved location with the same name
+            ConditionExpression="attribute_not_exists(Coordinates)"
         )
 
     except ClientError as e:
+        if _condition_failed(e):
+            raise ConflictError(f"A location named '{location_name}' already exists. Update it or pick another name.") from e
         logger.error(f"Failed to save location: {e}")
         raise DataAccessError("Failed to save location") from e
 
@@ -81,9 +91,8 @@ def save_location(author_id: str, location_name: str, location_type: str, coords
 # then, just pass that to the api caller through the handler
 # so you may want to change return type of this
 
-async def save_image_url(author_id: str, location_name: str, message) -> str:
+def save_image_url(author_id: str, location_name: str, image_url: str) -> dict:
     table = get_table()
-    image_url = await storeImageInS3(message)
     try:
         res = table.update_item(
             Key={
@@ -95,11 +104,15 @@ async def save_image_url(author_id: str, location_name: str, message) -> str:
                 ":img_url": encrypt(image_url).decode()
             },
             ReturnValues="UPDATED_NEW",
+            # without this, update_item would create a brand new row holding only the image
+            ConditionExpression="attribute_exists(Coordinates)"
         )
         return res
     except ClientError as e:
+        if _condition_failed(e):
+            raise InvalidLocationError(f"Location '{location_name}' not found.") from e
         logger.error(f"DynamoDB ClientError: {e}")
-        raise DataAccessError("Failed to url for image") from e
+        raise DataAccessError("Failed to save the URL for your image.") from e
 
 
 def set_seed(author_id: str, seed: str) -> tuple[bool, str]:
@@ -139,6 +152,8 @@ def update_location(author_id: str, location_name: str, new_coords: str) -> str:
         )
         return res
     except ClientError as e:
+        if _condition_failed(e):
+            raise InvalidLocationError(f"Location '{location_name}' not found.") from e
         logger.error(f"DynamoDB ClientError while updating location: {e}")
         raise DataAccessError("ClientError while updating location. Try again.")
 
@@ -203,7 +218,7 @@ def delete_location(author_id: str, location_name: str) -> str:
         raise DataAccessError(f"DynamoDB ClientError while deleting location: {e}")
 
 
-async def delete_image_url(author_id: str, location_name: str) -> str:
+def delete_image_url(author_id: str, location_name: str) -> dict:
     table = get_table()
     try:
         res = table.update_item(
@@ -212,10 +227,13 @@ async def delete_image_url(author_id: str, location_name: str) -> str:
                 "Location": generate_hash(location_name)
             },
             UpdateExpression="REMOVE Image_URL",
-            ReturnValues="ALL_OLD"
+            ReturnValues="ALL_OLD",
+            ConditionExpression="attribute_exists(Image_URL)"
         )
         return res
     except ClientError as e:
+        if _condition_failed(e):
+            raise NotFoundError(f"No image found for location '{location_name}'.") from e
         logger.error(f"DynamoDB ClientError while deleting image: {e}")
         raise DataAccessError(f"DynamoDB ClientError while deleting an image URL: {e}")
 

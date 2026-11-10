@@ -1,5 +1,6 @@
 from typing import Any, Dict, Optional
 import json
+from urllib.parse import unquote
 from attr import dataclass
 
 # dataclass decorator auto generates double underscore(dunder) boilerplate methods
@@ -48,7 +49,8 @@ class APIRequest:
         path_segments = path.strip("/").split("/")
         # This will be enhanced by router pattern matching, but extract common patterns
         if len(path_segments) >= 2 and path_segments[0] == "locations":
-            path_params['location_name'] = path_segments[1]
+            # names arrive URL-encoded ("My%20Base"); the database stores the plain name
+            path_params['location_name'] = unquote(path_segments[1])
         
         cognito_user_id = (
             event.get("requestContext", {})
@@ -69,7 +71,11 @@ class APIRequest:
 class APIResponse:
     def __init__(self, status_code: int, body: Dict[str, Any] | str):
         self.status_code = status_code
-        self.body = body if isinstance(body, dict) else {"message": body}
+        # plain-string bodies: errors go under "error", successes under "message"
+        if isinstance(body, dict):
+            self.body = body
+        else:
+            self.body = {"error" if status_code >= 400 else "message": body}
     
     def to_lambda_response(self) -> dict:
         """Convert to Lambda response format"""

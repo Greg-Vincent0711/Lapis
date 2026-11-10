@@ -27,7 +27,6 @@ BIOMES = [
     "Plains",
     "Desert",
     "Mountains",
-    "Extreme Hills",
     "Forest",
     "Taiga",
     "Swamp",
@@ -111,7 +110,6 @@ BIOMES = [
     "Deep Dark",
     "Mangrove Swamp",
     "Cherry Grove",
-    "Shattered Plateau",
     "Pale Garden"
 ]
 

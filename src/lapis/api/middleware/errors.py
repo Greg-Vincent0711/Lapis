@@ -24,6 +24,10 @@ class InvalidLocationError(APIError):
     def __init__(self, message: str = "Invalid location"):
         super().__init__(message, 404)
 
+class ConflictError(APIError):
+    def __init__(self, message: str):
+        super().__init__(message, 409)
+
 class ValidationError(APIError):
     def __init__(self, message: str):
         super().__init__(message, 400)
