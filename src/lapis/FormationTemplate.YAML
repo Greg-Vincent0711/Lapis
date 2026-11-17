@@ -1,7 +1,8 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
   Lapis backend: DynamoDB table, S3 bucket for images and Lambda code, the DB Lambda behind an
-  HTTP API with a Cognito JWT authorizer, and the seed-tools Lambda. Deploy with ./deploy.sh.
+  HTTP API with a Cognito JWT authorizer, the seed-tools Lambda, and the Discord bot on EC2.
+  Deploy with ./deploy.sh.
 
 # Things CloudFormation does NOT create, and why:
 #   - The Fernet encryption key (Secrets Manager secret named by FernetSecretName). Every saved
@@ -46,6 +47,19 @@ Parameters:
     Type: CommaDelimitedList
     Default: http://localhost:5173,http://localhost:5174,http://localhost:5175
     Description: Origins the browser may call the API from. Add the website's domain when it's hosted.
+  DiscordBotToken:
+    Type: String
+    NoEcho: true
+    Description: The bot's Discord token. Never commit it; deploy.sh reads TOKEN from .env.
+  BotInstanceType:
+    Type: String
+    Default: t4g.micro
+    # Graviton (ARM) only: the bundled inputHandler is a Linux ARM build, the same one Lambda runs
+    AllowedValues: [t4g.nano, t4g.micro, t4g.small, t4g.medium]
+  BotImageId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    # always the newest Amazon Linux 2023 ARM image; a newer image replaces the instance on the next deploy
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64
 
 Resources:
   # ---------- storage ----------
@@ -417,6 +431,187 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${LapisApi}/*/*/*"
 
+  # --------- EC2 ----------
+  LapisBotTokenSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: LapisBotToken
+      Description: Discord bot token, read by the bot at startup so it never sits on the instance's disk.
+      SecretString: !Ref DiscordBotToken
+
+  LapisBotRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: LapisBotRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        # Session Manager shell access and the Run Command deploy.sh uses to update the bot
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: LapisBotPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                Resource:
+                  - !GetAtt LapisTable.Arn
+                  - !Sub "${LapisTable.Arn}/index/*"
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource: !Sub "${LapisCodeAndImages.Arn}/uploads/*"
+              # the bot's code bundle, uploaded by deploy.sh
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub "${LapisCodeAndImages.Arn}/bot/*"
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:DescribeSecret
+                Resource:
+                  - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${FernetSecretName}*"
+                  - !Ref LapisBotTokenSecret
+
+  LapisBotInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref LapisBotRole]
+
+  LapisBotSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Lapis bot - nothing inbound; HTTPS out to Discord, AWS APIs and package mirrors
+      # no SecurityGroupIngress: the bot only makes outbound connections
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+  LapisBotLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId: !Ref BotImageId
+        InstanceType: !Ref BotInstanceType
+        IamInstanceProfile:
+          Arn: !GetAtt LapisBotInstanceProfile.Arn
+        SecurityGroupIds: [!GetAtt LapisBotSecurityGroup.GroupId]
+        MetadataOptions:
+          # IMDSv2 only: credentials can't be stolen through a simple request-forgery bug
+          HttpTokens: required
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: lapis-bot
+        # Runs once, on the instance's first boot. Editing it makes a new launch template version,
+        # which replaces the instance, so changes here always take effect.
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            set -euxo pipefail
+            dnf install -y python3.11 python3.11-pip unzip aws-cfn-bootstrap
+            # tell CloudFormation if anything below fails, so the deploy rolls back
+            trap '/opt/aws/bin/cfn-signal -e 1 --stack ${AWS::StackName} --resource LapisBotInstance --region ${AWS::Region}' ERR
+
+            useradd --system --home-dir /opt/lapis --shell /sbin/nologin lapis
+            mkdir -p /opt/lapis/data /etc/lapis
+            chown lapis:lapis /opt/lapis/data
+
+            # settings the bot reads with os.getenv (the bot token is fetched separately, at start)
+            cat > /etc/lapis/lapis.env <<'EOF'
+            TABLE_NAME=${LapisTable}
+            BUCKET_NAME=${LapisCodeAndImages}
+            REGION_NAME=${AWS::Region}
+            SECRET_NAME=${FernetSecretName}
+            EXECUTABLE_NAME=./src/lapis/inputHandler
+            SEED_CACHE=/opt/lapis/data/user_cache.db
+            CACHE_TABLE=user_seeds
+            EOF
+
+            # start wrapper: the token goes straight from Secrets Manager into the process
+            cat > /opt/lapis/run.sh <<'EOF'
+            #!/bin/bash
+            set -euo pipefail
+            TOKEN=$(aws secretsmanager get-secret-value --region ${AWS::Region} \
+              --secret-id ${LapisBotTokenSecret} --query SecretString --output text)
+            export TOKEN
+            cd /opt/lapis/app
+            exec /opt/lapis/venv/bin/python -m src.lapis.lapis
+            EOF
+
+            # pulls the code deploy.sh uploaded and restarts the bot; deploy.sh runs it on every deploy
+            cat > /opt/lapis/update.sh <<'EOF'
+            #!/bin/bash
+            set -euo pipefail
+            exec 9>/run/lapis-update.lock; flock 9
+            rm -rf /opt/lapis/next /tmp/lapis-bot.zip
+            aws s3 cp --quiet --region ${AWS::Region} s3://${LapisCodeAndImages}/bot/lapis-bot.zip /tmp/lapis-bot.zip
+            unzip -q /tmp/lapis-bot.zip -d /opt/lapis/next
+            [ -x /opt/lapis/venv/bin/python ] || python3.11 -m venv /opt/lapis/venv
+            /opt/lapis/venv/bin/pip install --quiet --disable-pip-version-check -r /opt/lapis/next/requirements.txt
+            chmod +x /opt/lapis/next/src/lapis/inputHandler
+            rm -rf /opt/lapis/app.old
+            if [ -d /opt/lapis/app ]; then mv /opt/lapis/app /opt/lapis/app.old; fi
+            mv /opt/lapis/next /opt/lapis/app
+            systemctl restart lapis
+            sleep 10
+            # fails the deploy if the bot crashed on startup (bad token, import error...)
+            systemctl is-active --quiet lapis || { journalctl -u lapis -n 40 --no-pager; exit 1; }
+            echo "Lapis bot is running."
+            EOF
+            chmod 755 /opt/lapis/run.sh /opt/lapis/update.sh
+
+            cat > /etc/systemd/system/lapis.service <<'EOF'
+            [Unit]
+            Description=Lapis Discord bot
+            After=network-online.target
+            Wants=network-online.target
+
+            [Service]
+            User=lapis
+            EnvironmentFile=/etc/lapis/lapis.env
+            ExecStart=/opt/lapis/run.sh
+            Restart=always
+            RestartSec=10
+            NoNewPrivileges=true
+            PrivateTmp=true
+            ProtectSystem=full
+
+            [Install]
+            WantedBy=multi-user.target
+            EOF
+            systemctl daemon-reload
+            systemctl enable lapis
+
+            /opt/lapis/update.sh
+            /opt/aws/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource LapisBotInstance --region ${AWS::Region}
+
+  LapisBotInstance:
+    Type: AWS::EC2::Instance
+    # the deploy waits until the bot is actually running (the cfn-signal at the end of UserData)
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT10M
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LapisBotLaunchTemplate
+        Version: !GetAtt LapisBotLaunchTemplate.LatestVersionNumber
+
 Outputs:
   ApiUrl:
     Description: Base URL for the website's VITE_APP_API_ENDPOINT.
@@ -426,3 +621,11 @@ Outputs:
     Value: !Ref LapisCodeAndImages
   DynamoDBTableName:
     Value: !Ref LapisTable
+  BotInstanceId:
+    Value: !Ref LapisBotInstance
+  BotShellCommand:
+    Description: Open a shell on the bot's instance (needs the Session Manager plugin for the AWS CLI).
+    Value: !Sub "aws ssm start-session --region ${AWS::Region} --target ${LapisBotInstance}"
+  BotLogsCommand:
+    Description: Run on the instance to follow the bot's logs.
+    Value: sudo journalctl -u lapis -f
