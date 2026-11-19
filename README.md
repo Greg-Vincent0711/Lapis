@@ -4,6 +4,13 @@ A Minecraft bot built around AWS Microservices that extends [Minecraft-based too
 
 Lapis has an [entire website](https://main.d15e4j6jt7lh3i.amplifyapp.com/) explaining my thought process creating this project and it's inner workings. Users can sign into this site(thanks to AWS Cognito) and store/retrieve locations and images of their own MC world. 
 
+
+https://github.com/user-attachments/assets/957de5e1-8075-457c-a2e5-3137d739d500
+
+
+
+
+
 You can think of Lapis as the younger, more complex sibling to [this](https://github.com/Greg-Vincent0711/Multi-purpose-Bot-for-Python/blob/main/DIscordBotVer%231.py) earlier project I made with a friend in 2021.
 
 ## Building the C Code
