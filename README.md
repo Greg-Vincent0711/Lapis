@@ -2,7 +2,7 @@
 
 A Minecraft bot built around AWS Microservices that extends [Minecraft-based tooling](https://github.com/Cubitect/cubiomes).
 
-Lapis has an [entire website](https://main.d15e4j6jt7lh3i.amplifyapp.com/) explaining my thought process creating this project and it's inner workings. Users can sign into this site using AWS Cognito, and store/retrieve locations and images of their own MC world. 
+Lapis has an [entire website](https://main.d15e4j6jt7lh3i.amplifyapp.com/) explaining my thought process creating this project and it's inner workings. Users can sign into this site(thanks to AWS Cognito) and store/retrieve locations and images of their own MC world. 
 
 You can think of Lapis as the younger, more complex sibling to [this](https://github.com/Greg-Vincent0711/Multi-purpose-Bot-for-Python/blob/main/DIscordBotVer%231.py) earlier project I made with a friend in 2021.
 
