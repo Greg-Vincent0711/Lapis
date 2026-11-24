@@ -18,8 +18,8 @@ You can think of Lapis as the younger, more complex sibling to [this](https://gi
 - [Architecture](#architecture)
 - [Encryption](#encryption)
 - [Authentication](#authentication)
-- [Seed Features (C + Cubiomes)](#seed-features-c--cubiomes)
 - [Infrastructure](#infrastructure)
+- [Seed Features (C + Cubiomes)](#seed-features-c--cubiomes)
 - [Building the C Code](#building-the-c-code)
 - [Deploying the Backend](#deploying-the-backend)
 
