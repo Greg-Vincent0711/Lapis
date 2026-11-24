@@ -27,7 +27,7 @@ You can think of Lapis as the younger, more complex sibling to [this](https://gi
 
 ## A Human's Perspective
 
-*(i.e., I read all my code and wrote this without an LLM... as nature intended)*
+*(tldr - I read all my code and wrote this out without an LLM... as nature intended)*
 
 > **Disclaimer:** To get this project resume-ready (working and showable, since I had kind of abandoned it a year ago), I used Claude Code to speed up my remaining todos. I needed CRUD functionality to work across the website and bot, I needed the bot hosted on EC2, and I needed to fix any bugs I had. Since I had an express goal I wanted completed quickly, I leaned more into being a code reviewer than a writer. This nets serious productivity gains, and Lapis is resume-ready now: usable, hosted, etc. But it takes away from the creator's understanding of the code if they become too reliant on seeing things work without understanding how they work.
 
