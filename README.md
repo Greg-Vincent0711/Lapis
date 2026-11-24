@@ -35,6 +35,15 @@ As such, I've thoroughly read through my code to write something that helps futu
 
 **Phase 2** of this project will be written completely by hand, with LLMs acting only as a guide for concepts or ideas I may struggle with. Should be fun.
 
+A quick sidenote on the different phases...
+
+For Phase 2 - I want to make a viewer akin to the Cubiomes-viewer that already exists and is used by MC seed finding projects.
+I want to extend it to work for modpacks like BetterMC(my current modpack of choice), and show users their saved coordinates and images overlaid onto a map. 
+
+For Phase 3 - I want to take it a step further and build my own NBT viewer akin to [this one](https://www.shulkr.com/en) to work in tandem with the map. 
+
+These two are subject to change, but that's the direction this project is moving in. 
+
 ---
 
 ## Overview
